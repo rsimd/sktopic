@@ -1,0 +1,22 @@
+version: '3'
+services:
+  gputrainer:
+    image: gpu_jax #d470jax2
+    #build: .
+    ports:
+      - 18889:8080
+    volumes:
+      - "./:/workdir"
+    tty: true
+    stdin_open: true
+    #environment: 
+    #  - WANDB_API_KEY=${WANDB_API_KEY}
+    #  - NVIDIA_VISIBLE_DEVICES=all
+
+    #runtime: nvidia
+    deploy:
+      resources:
+        reservations:
+          devices:
+          - capabilities: [gpu]
+    working_dir: /workdir

@@ -1,0 +1,5 @@
+data
+.vscode
+.docker
+etc
+**/__pycache__
