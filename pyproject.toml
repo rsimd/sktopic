@@ -20,6 +20,7 @@ Cython = "^0.29.24"
 gensim = "^4.1.2"
 octis = "^1.9.0"
 hydra-core = "^1.1.1"
+hyperspherical-vae = {git = "https://github.com/nicola-decao/s-vae-pytorch.git"}
 
 [tool.poetry.dev-dependencies]
 ipython = "^7.28.0"
