@@ -2,7 +2,7 @@ from typing import Sequence,Optional,Any
 from collections import OrderedDict
 import torch
 import torch.nn as nn
-from sktopic.ntm import (
+from .base import (
     NTM, Compressor, H2GaussParams, Decoder)
 from torch.distributions import (
     Normal,

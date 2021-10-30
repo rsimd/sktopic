@@ -9,9 +9,9 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.distributions import MultivariateNormal
 
-from .distributions import SoftmaxLogisticNormal
+from ..distributions import SoftmaxLogisticNormal
 from collections import OrderedDict
-from .utils import normalizel2
+from ..utils import normalizel2
 
 __all__ = [
     "Compressor",

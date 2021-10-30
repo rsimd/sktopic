@@ -7,13 +7,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.distributions import Normal
 
-from ..ntm import (
-    NTM,
-    Compressor, 
-    H2GaussParams, 
-    Decoder,
-    ELBO
-)
+from .base import ELBO
 
 
 class ClusterLoss(ELBO):
