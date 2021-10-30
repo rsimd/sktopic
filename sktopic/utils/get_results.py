@@ -1,6 +1,5 @@
 from typing import Dict, Any
 import numpy as np
-from multipledispatch import dispatch
 import torch 
 import pandas as pd
 from skorch.utils import to_numpy
