@@ -16,7 +16,6 @@ toolz = "^0.11.1"
 wandb = "^0.12.5"
 torch = "^1.10.0"
 skorch = {git = "https://github.com/skorch-dev/skorch.git", rev = "release-0.11.0"}
-Cython = "^0.29.24"
 gensim = "^4.1.2"
 octis = "^1.9.0"
 hydra-core = "^1.1.1"
