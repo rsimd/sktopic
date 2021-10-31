@@ -1,1 +1,1 @@
-from .vae import Trainer as VAETrainer
+from .vae import Trainer

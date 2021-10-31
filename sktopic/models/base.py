@@ -18,6 +18,7 @@ __all__ = [
     "H2GaussParams",
     "Decoder",
     "NTM"
+    "ELBO"
 ]
 
 
@@ -118,7 +119,7 @@ class Decoder(nn.Module):
 
 class NTM(nn.Module):
     def __init__(self, dims:Sequence[int],embed_dim:Optional[int]=None, 
-            activation_hidden:str="Softplus",
+            activation_hidden:str="Tanh",
             dropout_rate_hidden:float=0.2, dropout_rate_theta:float=0.2, 
             device:Any=None, dtype:Any=None, topic_model:bool=False, n_sampling:int=1):
         super().__init__()

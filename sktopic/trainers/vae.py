@@ -37,7 +37,7 @@ class Dataset(skorch.dataset.Dataset):
             X = X.toarray().squeeze(0)
 
         if y is None:
-            return X, np.zeros(X.shape[0], dtype=np.int8) # Noneにしたけどホントに良いのか？
+            return X, 0.0 # Noneにしたけどホントに良いのか？
 
         if sparse.issparse(y):
             y = y.toarray().squeeze(0)
@@ -140,48 +140,11 @@ class Trainer(skorch.NeuralNet, TransformerMixin):
         Trainer
             return (initialized) self
         """
-        self.initialize_virtual_params()
-        self.initialize_callbacks()
-        self.initialize_criterion()
-        self.initialize_module()
-        self.initialize_optimizer()
-        self.initialize_history()
-        self.initialized_ = True
+        super().initialize()
         self.transform_args = None
         self.scaler = torch.cuda.amp.GradScaler(enabled=self.use_amp)
         self._pseudo_labels = None
         return self
-
-    def initialize_optimizer(self, triggered_directly=True):
-        """Initialize the model optimizer. If ``self.optimizer__lr``
-        is not set, use ``self.lr`` instead.
-        Parameters
-        ----------
-        triggered_directly : bool (default=True)
-          Only relevant when optimizer is re-initialized.
-          Initialization of the optimizer can be triggered directly
-          (e.g. when lr was changed) or indirectly (e.g. when the
-          module was re-initialized). If and only if the former
-          happens, the user should receive a message informing them
-          about the parameters that caused the re-initialization.
-        """
-        args, kwargs = self.get_params_for_optimizer(
-            'optimizer', chain(self.module_.named_parameters(), self.criterion_.named_parameters()))
-
-        if self.initialized_ and self.verbose:
-            msg = self._format_reinit_msg(
-                "optimizer", kwargs, triggered_directly=triggered_directly)
-            print(msg)
-
-        if 'lr' not in kwargs:
-            kwargs['lr'] = self.lr
-
-        self.optimizer_ = self.optimizer(*args, **kwargs)
-
-        self._register_virtual_param(
-            ['optimizer__param_groups__*__*', 'optimizer__*', 'lr'],
-            optimizer_setter,
-        )
 
     @torch.no_grad()
     def predict_proba(self, X:torch.Tensor, logscale=False)->np.ndarray:
@@ -201,8 +164,8 @@ class Trainer(skorch.NeuralNet, TransformerMixin):
         outputs = []
         datasets = self.get_dataset(X)
         for data in self.get_iterator(datasets,):
-            X = data[0].to(self.device)
-            output = self.infer(X)
+            xi = data[0].to(self.device)
+            output = self.infer(xi)
             lnpx = output["lnpx"]
             if logscale:
                 z = lnpx
@@ -287,7 +250,8 @@ class Trainer(skorch.NeuralNet, TransformerMixin):
 
         return outputs
 
-    def train_step(self, Xi, yi=None,**fit_params):
+    def train_step(self, batch, **fit_params):
+        Xi, yi= batch
         self.module_.train()
         #print(self._pseudo_labels)
         self.optimizer_.zero_grad()
@@ -301,7 +265,8 @@ class Trainer(skorch.NeuralNet, TransformerMixin):
         return dict(y_pred=y_preds["lnpx"], **outputs )
 
     @torch.no_grad()
-    def validation_step(self, Xi, yi=None, **fit_params):
+    def validation_step(self, batch, **fit_params):
+        Xi, yi = batch
         self.module_.eval()
         with torch.cuda.amp.autocast(enabled=self.use_amp):
             y_preds = self.infer(Xi,**fit_params)
@@ -310,7 +275,8 @@ class Trainer(skorch.NeuralNet, TransformerMixin):
         return dict(y_pred=y_preds["lnpx"], **outputs )
 
     @torch.no_grad()
-    def evaluation_step(self, Xi,yi=None, **fit_params):
+    def evaluation_step(self, batch, **fit_params):
+        Xi,yi = batch
         self.module_.eval()
         with torch.cuda.amp.autocast(enabled=self.use_amp):
             y_preds = self.infer(Xi,**fit_params)
@@ -319,12 +285,13 @@ class Trainer(skorch.NeuralNet, TransformerMixin):
         return dict(y_pred=y_preds["lnpx"], **outputs )
 
     def infer(self, x, **fit_params):
+        #print(type(x), x)
         x = skorch.utils.to_tensor(x, device=self.device)
         #yi = skorch.utils.to_tensor(yi, device=self.device) if yi is not None else None
         if isinstance(x, dict):
             x_dict = self._merge_x_and_fit_params(x, fit_params)
             return self.module_(**x_dict)
-        return self.module_(x, **fit_params)
+        return self.module_(x,**fit_params)
 
     @torch.no_grad()
     def get_similar_words(self, queries:list[str], id2word:dict[int,str], topn:int=10)->pd.DataFrame:
@@ -380,7 +347,7 @@ class Trainer(skorch.NeuralNet, TransformerMixin):
             raise ValueError("beta's shape needs be (topic_dim, vocab_size)")
         return get_topic_top_words(beta, id2word,topn=topn)
 
-    def get_model_outputs(self, X_tr:Any, X_te:Any, id2word:dict[int,str])->dict[str, Any]:
+    def get_model_outputs(self, X_tr:Any, X_te:Optional[Any]=None, id2word:dict[int,str]=None)->dict[str, Any]:
         """get output for octis.evaluation_metrics
 
         Parameters
@@ -508,3 +475,64 @@ class Trainer(skorch.NeuralNet, TransformerMixin):
         
         ppl = exp_fn(-reduced_nll / n_tokens)
         return float(to_numpy(ppl))
+
+    #####
+    def fit_loop(self, X,y=None, epochs=None, **fit_params): ##
+        self.check_data(X, y)
+        epochs = epochs if epochs is not None else self.max_epochs
+
+        dataset_train, dataset_valid = self.get_split_datasets(
+            X,y, **fit_params) #wip
+        on_epoch_kwargs = {
+            'dataset_train': dataset_train,
+            'dataset_valid': dataset_valid,
+        }
+
+        for _ in range(epochs):
+            self.notify('on_epoch_begin', **on_epoch_kwargs)
+
+            self.run_single_epoch(dataset_train, training=True, prefix="train",
+                                  step_fn=self.train_step, **fit_params)
+
+            self.run_single_epoch(dataset_valid, training=False, prefix="valid",
+                                  step_fn=self.validation_step, **fit_params)
+
+            self.notify("on_epoch_end", **on_epoch_kwargs)
+        return self
+
+    def run_single_epoch(self, dataset, training, prefix, step_fn, **fit_params):
+        if dataset is None:
+            return
+
+        batch_count = 0
+        for batch in self.get_iterator(dataset, training=training):
+            self.notify("on_batch_begin", batch=batch, training=training)
+            step = step_fn(batch, **fit_params)
+            self.history.record_batch(prefix + "_loss", step["loss"].item())
+            batch_size = (get_len(batch[0]) if isinstance(batch, (tuple, list))
+                          else get_len(batch))
+            self.history.record_batch(prefix + "_batch_size", batch_size)
+            self.notify("on_batch_end", batch=batch, training=training, **step)
+            batch_count += 1
+
+        self.history.record(prefix + "_batch_count", batch_count)
+
+    # pylint: disable=unused-argument
+    def partial_fit(self, X,y=None, classes=None, **fit_params): ##
+        if not self.initialized_:
+            self.initialize()
+
+        self.notify('on_train_begin', X=X, y=y)
+        try:
+            self.fit_loop(X,y, **fit_params) #wip
+        except KeyboardInterrupt:
+            pass
+        self.notify('on_train_end', X=X, y=y)
+        return self
+
+    def fit(self, X,y=None, **fit_params): ##
+        if not self.warm_start or not self.initialized_:
+            self.initialize()
+
+        self.partial_fit(X,y, **fit_params) #wip
+        return self
