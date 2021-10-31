@@ -17,7 +17,7 @@ from octis.evaluation_metrics import diversity_metrics
 ...     ('my_score', Scoring(my_score, name='my_score'))
 """
 
-__all__ = ["TopicScoring", "WECoherenceScoring","TopicDiversityScoring"]
+__all__ = ["TopicScoring", "WECoherenceScoring","TopicDiversityScoring","TopicQualityScoring"]
 
 class TopicScoring(EpochScoring):
     def __init__(self, scoring_fn, id2word:dict[int,str], topn:int=10, lower_is_better=False, name=None):
@@ -50,19 +50,27 @@ class TopicScoring(EpochScoring):
 
 
 class WECoherenceScoring(TopicScoring):
-    def __init__(self, id2word:dict[int,str], method:str="pairwise", kv_path:Optional[str]=None, topn:int=10, binary: bool=True):
+    def __init__(self, id2word:dict[int,str], method:str="pairwise", kv_path:Optional[str]=None, topn:int=10, binary: bool=True, coherence_object=None):
         self.kv_path = kv_path
         self.method = method
         self.binary = binary
-        if self.method == "centroid":
-            self.coherencemodel = coherence_metrics.WECoherenceCentroid(word2vec_path=self.kv_path,binary=self.binary,topk=topn)
-            _name = "wetc_c"
-        elif self.method == "pairwise":
-            self.coherencemodel = coherence_metrics.WECoherencePairwise(word2vec_path=self.kv_path,binary=self.binary,topk=topn)
-            _name = "wetc_pw"
+
+        if coherence_object is None:
+            if self.method == "centroid":
+                self.coherencemodel = coherence_metrics.WECoherenceCentroid(word2vec_path=self.kv_path,binary=self.binary,topk=topn)
+                _name = "wetc_c"
+            elif self.method == "pairwise":
+                self.coherencemodel = coherence_metrics.WECoherencePairwise(word2vec_path=self.kv_path,binary=self.binary,topk=topn)
+                _name = "wetc_pw"
+            else:
+                NotImplementedError
         else:
-            NotImplementedError
-        super().__init__(self.coherencemodel.score, id2word,topn,lower_is_better=False, name=_name)
+            self.coherencemodel = coherence_object
+            if self.method == "centroid":
+                _name = "wetc_c"
+            elif self.method == "pairwise":
+                _name = "wetc_pw"
+        super().__init__(self.coherencemodel.score,id2word,topn,lower_is_better=False, name=_name)
 
 class TopicDiversityScoring(TopicScoring):
     def __init__(self, id2word: dict[int, str], topn: int = 10):
@@ -71,6 +79,17 @@ class TopicDiversityScoring(TopicScoring):
         self.model = diversity_metrics.TopicDiversity(topn)
         scoring_fn = self.model.score
         super().__init__(scoring_fn, id2word, topn=topn, lower_is_better=lower_is_better, name=name)
+
+class TopicQualityScoring(TopicScoring):
+    def __init__(self, id2word:dict[int,str], method:str="pairwise", kv_path:Optional[str]=None, topn:int=10, binary: bool=True, coherence_object=None):
+        self.coherence = WECoherenceScoring(id2word,method,kv_path,topn,binary,coherence_object)
+        self.diversity = TopicDiversityScoring(id2word,topn)
+        self.scoring_fn = lambda x:self.coherence.scoring(x)*self.diversity.scoring(x)
+        super().__init__(self.scoring_fn, id2word, topn=topn, lower_is_better=False, name="tq")
+
+    def on_epoch_end(self,net, dataset_train=None,dataset_valid=None,**kwargs):
+        current_score = self._scoring(net)
+        self._record_score(net.history, current_score)
 
 # class WECoherenceScoring(EpochScoring):
 #     def __init__(self, id2word:dict[int,str], method:str="pairwise", kv_path:Optional[str]=None, topn:int=10, binary: bool=True):
