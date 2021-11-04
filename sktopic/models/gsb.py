@@ -1,23 +1,26 @@
 from typing import Sequence,Optional,Any, Callable
 import torch
+
 from sktopic.trainers.vae import Trainer
-from ..components import NTM,ELBO
+from ..components import NTM, ELBO
 from ..trainers.vae import Dataset, Trainer
 from torch.utils.data import DataLoader
 from skorch.dataset import CVSplit
+from ..distributions import GaussianStickBreakingConstruction
 
-__all__ = ["NVDM","NeuralVariationalDocumentModel"]
+__all__ = ["GSB","GaussianStickBreakingModel"]
 
-class NVDM(NTM):
-    def __init__(self, dims:Sequence[int],embed_dim:Optional[int]=None, 
-            activation_hidden:str="Softplus",
-            dropout_rate_hidden:float=0.2, dropout_rate_theta:float=0.2, 
-            device:Any=None, dtype:Any=None,n_sampling=1):
-        super().__init__(dims,embed_dim,activation_hidden,
-                        dropout_rate_hidden,dropout_rate_theta,
-                        device,dtype,topic_model=False,n_sampling=n_sampling)
 
-class NeuralVariationalDocumentModel(Trainer):
+class GSB(NTM):
+    def _build(self)->None:
+        super()._build(
+            map_theta = GaussianStickBreakingConstruction(
+            self.n_components,self.device,self.dtype
+            )
+        )
+
+
+class GaussianStickBreakingModel(Trainer):
     def __init__(self,
             vocab_size:int,
             n_components:int, 
@@ -42,7 +45,7 @@ class NeuralVariationalDocumentModel(Trainer):
             criterion:Callable=ELBO,
             **kwargs,
             ):
-        """ Sklearn like trainer for NeuralVariationalDocumentModel
+        """ Sklearn like trainer for GaussianStickBreakingModel
 
         Parameters
         ----------
@@ -90,7 +93,7 @@ class NeuralVariationalDocumentModel(Trainer):
         if hidden_dims is None:
             hidden_dims = [n_components*3,n_components*2]
         _dims = [vocab_size]+hidden_dims+[n_components]
-        _module = NVDM(_dims,embed_dim,activation_hidden,dropout_rate_hidden,dropout_rate_theta)
+        _module = GSB(_dims,embed_dim,activation_hidden,dropout_rate_hidden,dropout_rate_theta)
         super().__init__(
             module=_module,
             criterion=criterion,
@@ -108,4 +111,3 @@ class NeuralVariationalDocumentModel(Trainer):
             device=device,
             **kwargs
             )
-        

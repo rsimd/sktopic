@@ -5,19 +5,35 @@ from ..components import NTM,ELBO
 from ..trainers.vae import Dataset, Trainer
 from torch.utils.data import DataLoader
 from skorch.dataset import CVSplit
+from torch.distributions.kl import kl_divergence
+from ..distributions import SoftmaxLogisticNormal
 
-__all__ = ["NVDM","NeuralVariationalDocumentModel"]
+__all__ = ["ProdLDA","ProductOfExpertsLatentDirichletAllocation"]
 
-class NVDM(NTM):
+class ProdLDA(NTM):
     def __init__(self, dims:Sequence[int],embed_dim:Optional[int]=None, 
             activation_hidden:str="Softplus",
             dropout_rate_hidden:float=0.2, dropout_rate_theta:float=0.2, 
-            device:Any=None, dtype:Any=None,n_sampling=1):
+            device:Any=None, dtype:Any=None,alpha:Optional[float]=None,n_sampling=1):
         super().__init__(dims,embed_dim,activation_hidden,
                         dropout_rate_hidden,dropout_rate_theta,
                         device,dtype,topic_model=False,n_sampling=n_sampling)
+        self.alpha_pz = alpha if alpha is not None else 1/self.n_components
 
-class NeuralVariationalDocumentModel(Trainer):
+    def _build(self)->None:
+        return super()._build(rt = SoftmaxLogisticNormal)
+
+    def get_loss(self, x, lnpx, q_z):
+        nll = - torch.sum(x*lnpx, dim=1).mean()
+        p_z = self.rt.from_alpha(torch.ones_like(q_z.loc)*self.alpha_pz)
+        kld = kl_divergence(q_z, p_z)
+        if kld.ndim == 2:
+            kld = kld.sum(1)
+        kld = kld.mean()
+        return dict(nll=nll,kld=kld, elbo=nll+kld)
+
+
+class ProductOfExpertsLatentDirichletAllocation(Trainer):
     def __init__(self,
             vocab_size:int,
             n_components:int, 
@@ -26,6 +42,7 @@ class NeuralVariationalDocumentModel(Trainer):
             activation_hidden: str = "Softplus",
             dropout_rate_hidden: float = 0.2, 
             dropout_rate_theta: float = 0.2,
+            prior_alpha: Optional[float] = None,
             optimizer:Any=torch.optim.Adam,
             lr:float=0.01,
             max_epochs:int=10,
@@ -42,7 +59,7 @@ class NeuralVariationalDocumentModel(Trainer):
             criterion:Callable=ELBO,
             **kwargs,
             ):
-        """ Sklearn like trainer for NeuralVariationalDocumentModel
+        """ Sklearn like trainer for ProductOfExpertsLatentDirichletAllocation
 
         Parameters
         ----------
@@ -90,7 +107,7 @@ class NeuralVariationalDocumentModel(Trainer):
         if hidden_dims is None:
             hidden_dims = [n_components*3,n_components*2]
         _dims = [vocab_size]+hidden_dims+[n_components]
-        _module = NVDM(_dims,embed_dim,activation_hidden,dropout_rate_hidden,dropout_rate_theta)
+        _module = ProdLDA(_dims,embed_dim,activation_hidden,dropout_rate_hidden,dropout_rate_theta,alpha=prior_alpha)
         super().__init__(
             module=_module,
             criterion=criterion,

@@ -6,6 +6,7 @@ from torch.distributions.transforms import StickBreakingTransform
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn.modules.rnn import RNNCell
+from sparsemax import Sparsemax
 
 __all__ = [
     "GaussianSoftmaxConstruction",

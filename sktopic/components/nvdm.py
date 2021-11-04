@@ -17,8 +17,8 @@ __all__ = [
     "Compressor",
     "H2GaussParams",
     "Decoder",
-    "NTM"
-    "ELBO"
+    "NTM",
+    "ELBO",
 ]
 
 

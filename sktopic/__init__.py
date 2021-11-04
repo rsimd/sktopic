@@ -5,4 +5,5 @@ from . import (
     models, 
     trainers, 
     utils,
+    components,
 )

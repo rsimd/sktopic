@@ -4,6 +4,7 @@ from setuptools import setup
 packages = \
 ['sktopic',
  'sktopic.callbacks',
+ 'sktopic.components',
  'sktopic.distributions',
  'sktopic.metrics',
  'sktopic.models',
@@ -14,8 +15,7 @@ package_data = \
 {'': ['*']}
 
 install_requires = \
-['Cython>=0.29.24,<0.30.0',
- 'gensim>=4.1.2,<5.0.0',
+['gensim>=4.1.2,<5.0.0',
  'hydra-core>=1.1.1,<2.0.0',
  'hyperspherical-vae @ '
  'git+https://github.com/nicola-decao/s-vae-pytorch.git@master',

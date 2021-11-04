@@ -7,7 +7,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.distributions import Normal
 
-from .base import ELBO
+from ..components import ELBO
 
 
 class ClusterLoss(ELBO):

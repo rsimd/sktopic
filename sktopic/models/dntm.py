@@ -2,7 +2,7 @@ from typing import Optional
 import torch
 from torch import nn
 import torch.nn.functional as F
-from .base import Compressor, H2GaussParams
+from ..components import Compressor, H2GaussParams
 from ..distributions import SoftmaxLogisticNormal
 
 
