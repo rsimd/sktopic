@@ -26,6 +26,7 @@ class RecurrentStickBreakingModel(Trainer):
             activation_hidden: str = "Softplus",
             dropout_rate_hidden: float = 0.2, 
             dropout_rate_theta: float = 0.2,
+            topic_model: bool = False,
             optimizer:Any=torch.optim.Adam,
             lr:float=0.01,
             max_epochs:int=10,
@@ -47,19 +48,21 @@ class RecurrentStickBreakingModel(Trainer):
         Parameters
         ----------
         vocab_size : int
-            [description]
+            Number of Unique tokens
         n_components : int
-            [description]
+            Number of Topics
         hidden_dims : Optional[Sequence[int]], optional
-            [description], by default None
+            List of number of units of hidden layers, by default None
         embed_dim : Optional[int], optional
-            [description], by default None
+            Dimension of word embeddings, by default None
         activation_hidden : str, optional
-            [description], by default "Softplus"
+            Activation function of hidden layers, by default "Softplus"
         dropout_rate_hidden : float, optional
-            [description], by default 0.2
+            Dropout rate of output of hidden layers, by default 0.2
         dropout_rate_theta : float, optional
-            [description], by default 0.2
+            Dropout rate of Topic-proportion vectors, by default 0.2
+        topic_model: bool, optional
+            if True, Topic Model style decoder, esle DocumentModel stype, by default False
         optimizer : Any, optional
             class object of torch.optim, by default torch.optim.Adam
         lr : float, optional
@@ -90,7 +93,10 @@ class RecurrentStickBreakingModel(Trainer):
         if hidden_dims is None:
             hidden_dims = [n_components*3,n_components*2]
         _dims = [vocab_size]+hidden_dims+[n_components]
-        _module = RSB(_dims,embed_dim,activation_hidden,dropout_rate_hidden,dropout_rate_theta)
+        _module = RSB(
+            _dims,embed_dim,activation_hidden,
+            dropout_rate_hidden,dropout_rate_theta,
+            topic_model=topic_model)
         super().__init__(
             module=_module,
             criterion=criterion,

@@ -47,19 +47,19 @@ class NeuralVariationalDocumentModel(Trainer):
         Parameters
         ----------
         vocab_size : int
-            [description]
+            Number of Unique tokens
         n_components : int
-            [description]
+            Number of Topics
         hidden_dims : Optional[Sequence[int]], optional
-            [description], by default None
+            List of number of units of hidden layers, by default None
         embed_dim : Optional[int], optional
-            [description], by default None
+            Dimension of word embeddings, by default None
         activation_hidden : str, optional
-            [description], by default "Softplus"
+            Activation function of hidden layers, by default "Softplus"
         dropout_rate_hidden : float, optional
-            [description], by default 0.2
+            Dropout rate of output of hidden layers, by default 0.2
         dropout_rate_theta : float, optional
-            [description], by default 0.2
+            Dropout rate of Topic-proportion vectors, by default 0.2
         optimizer : Any, optional
             class object of torch.optim, by default torch.optim.Adam
         lr : float, optional
