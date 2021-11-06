@@ -37,18 +37,21 @@ def download_file(url:str,dst_path:str,mode="w")->None:
     except urllib.error.URLError as e:
         print(e)
 
-def load_cache(data_home:str)->dict[str,Any]:
-    X = sparse.load_npz("/".join(data_home,"corpus.npz"))
-    labels = pd.read_csv("/".join(data_home,"labels.txt"), header=None).values.T.squeeze()
-    with open("/".join(data_home,"vocab.txt")) as f:
+def load_cache(data_dir:str)->dict[str,Any]:
+    X = sparse.load_npz("/".join([data_dir,"corpus.npz"]))
+    labels = pd.read_csv("/".join([data_dir,"labels.txt"]), header=None).values.T.squeeze()
+    with open("/".join([data_dir,"vocabs.txt"])) as f:
         vocabs = f.readlines()
     id2word = {k:v for k,v in enumerate(vocabs)}
     word2id = {v:k for k,v in id2word.items()}
+    df=pd.read_table("/".join([data_dir,"corpus.txt"]),header=None)
+    df.columns = ["doc"]
     outputs = dict(
         X=X, 
         id2word=id2word,
         word2id=word2id, 
         labels=labels,
+        corpus = df.doc.to_list()
     )
     return outputs
 
@@ -86,6 +89,7 @@ def load_from_uri(config:dict[str,str], data_home:Optional[str]=None)->dict[str,
         id2word=id2word,
         word2id=word2id, 
         labels=labels,
+        corpus = df.doc.to_list()
     )
     if data_home is not None:
         # ファイルを保存
@@ -105,10 +109,7 @@ def load_from_uri(config:dict[str,str], data_home:Optional[str]=None)->dict[str,
 def fetch_shortext(data_name:str,
     *,
     data_home:str=None,
-    subset:str="all",
     download_if_missing:bool=True,
-    random_state:Optional[int]=None,
-    shuffle:bool=False,
     use_cache:bool=True,
     )->dict[str,Any]:
     """fetch shorttext from https://github.com/qiang2100/STTM
@@ -142,24 +143,18 @@ def fetch_shortext(data_name:str,
     """
     if data_home is None:
         data_home = rootpath.detect() + "/data"
-    try:
-        os.makedirs(data_home)
-    except:
-        print(f"File exists: {data_home}")
+    data_dir = "/".join([data_home, data_name])
     if use_cache:
-        files = os.listdir(data_home)
-        flag = [
-            "corpus.npz" in files,
-            "labels.txt" in files,
-            "vocab.txt" in files,
-        ]
-        if np.sum(flag) == True:
-            outputs = load_cache(data_home)
+        try:
+            outputs = load_cache(data_dir)
             return outputs
-        elif not download_if_missing:
-            raise IOError("The cache files does not exist.")
-        else:
-            pass
+        except:
+            msg = "The cache files does not exist."
+            if download_if_missing:
+                print(msg)
+            else:
+                raise IOError(msg)
+    print("Download corpus...")
     config = OmegaConf.load(f"{MODULE_PATH}/sourse.yaml")[data_name]
     outputs = load_from_uri(config, data_home)
     return outputs
