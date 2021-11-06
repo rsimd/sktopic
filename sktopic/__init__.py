@@ -6,4 +6,5 @@ from . import (
     trainers, 
     utils,
     components,
+    datasets,
 )

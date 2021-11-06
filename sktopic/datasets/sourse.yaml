@@ -1,0 +1,50 @@
+system:
+  thread:
+    16
+SearchSnippets:
+  name:
+    SearchSnippets
+  corpus:
+    https://raw.githubusercontent.com/qiang2100/STTM/master/dataset/SearchSnippets.txt
+  labels:
+    https://raw.githubusercontent.com/qiang2100/STTM/master/dataset/SearchSnippets_label.txt
+
+StackOverflow:
+  name:
+   StackOverflow
+  corpus:
+    https://raw.githubusercontent.com/qiang2100/STTM/master/dataset/StackOverflow.txt
+  labels:
+    https://raw.githubusercontent.com/qiang2100/STTM/master/dataset/StackOverflow_label.txt
+
+Biomedical:
+  name:
+    Biomedical
+  corpus:
+    https://raw.githubusercontent.com/qiang2100/STTM/master/dataset/Biomedical.txt
+  labels:
+    https://raw.githubusercontent.com/qiang2100/STTM/master/dataset/Biomedical_label.txt
+
+TrecTweet:
+  name:
+    TrecTweet
+  corpus:
+    https://raw.githubusercontent.com/qiang2100/STTM/master/dataset/Tweet.txt
+  labels:
+    https://raw.githubusercontent.com/qiang2100/STTM/master/dataset/Tweet_LABEL.txt
+
+GoogleNews:
+  name:
+    GoogleNews
+  corpus:
+    https://raw.githubusercontent.com/qiang2100/STTM/master/dataset/GoogleNews.txt
+  labels:
+    https://raw.githubusercontent.com/qiang2100/STTM/master/dataset/GoogleNews_LABEL.txt
+
+PascalFlicker:
+  name:
+    PascalFlicker
+  corpus:
+    https://raw.githubusercontent.com/qiang2100/STTM/master/dataset/Pascal_Flickr.txt
+  labels:
+    https://raw.githubusercontent.com/qiang2100/STTM/master/dataset/Pascal_Flickr_LABEL.txt
