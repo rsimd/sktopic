@@ -20,6 +20,8 @@ gensim = "^4.1.2"
 octis = "^1.9.0"
 hydra-core = "^1.1.1"
 hyperspherical-vae = {git = "https://github.com/nicola-decao/s-vae-pytorch.git"}
+pandarallel = "^1.5.4"
+rootpath = "^0.1.1"
 
 [tool.poetry.dev-dependencies]
 ipython = "^7.28.0"
