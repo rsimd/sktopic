@@ -8,6 +8,11 @@ import os
 import pandas as pd 
 from pandarallel import pandarallel
 from functools import partial
+import os
+import pprint
+import time
+import urllib.error
+import urllib.request
 
 __all__ = [
     "fetch_shortext",
@@ -20,6 +25,17 @@ __all__ = [
 ]
 
 MODULE_PATH = rootpath.detect() + "/sktopic/datasets"
+
+def download_file(url:str,dst_path:str,mode="w")->None:
+    try:
+        with urllib.request.urlopen(url) as web_file:
+            data = web_file.read()
+            if "w" == mode:
+                data = data.decode('utf-8')
+            with open(dst_path, mode=mode) as local_file:
+                local_file.write(data)
+    except urllib.error.URLError as e:
+        print(e)
 
 def load_cache(data_home:str)->dict[str,Any]:
     X = sparse.load_npz("/".join(data_home,"corpus.npz"))
@@ -39,12 +55,9 @@ def load_cache(data_home:str)->dict[str,Any]:
 def load_from_uri(config:dict[str,str], data_home:Optional[str]=None)->dict[str,Any]:
     pandarallel.initialize()
     # download txt
-    url = config.corpus
-    token_url = config.labels
-
-    df=pd.read_table(url,header=None)
+    df=pd.read_table(config.corpus,header=None)
     df.columns = ["doc"]
-    labels = pd.read_csv(token_url, header=None).values.T.squeeze()
+    labels = pd.read_csv(config.labels, header=None).values.T.squeeze()
     
     # split doc
     df["splited"] =  df.doc.parallel_apply(lambda line:line.split())
@@ -75,9 +88,18 @@ def load_from_uri(config:dict[str,str], data_home:Optional[str]=None)->dict[str,
         labels=labels,
     )
     if data_home is not None:
-        sparse.save_npz(f"{data_home}/corpus",X)
         # ファイルを保存
-
+        data_path = f"{data_home}/{config.name}"
+        try:
+            os.makedirs(data_path)
+        except:
+            pass
+        sparse.save_npz(f"{data_path}/corpus",X)
+        download_file(config.labels, f"{data_path}/labels.txt")
+        download_file(config.corpus, f"{data_path}/corpus.txt")
+        with open(f"{data_path}/vocabs.txt", "w") as f:
+            vocabs = "\n".join([word for word in word2id.keys()])
+            f.write(vocabs)
     return outputs
 
 def fetch_shortext(data_name:str,
@@ -139,11 +161,12 @@ def fetch_shortext(data_name:str,
         else:
             pass
     config = OmegaConf.load(f"{MODULE_PATH}/sourse.yaml")[data_name]
-    outputs = load_from_uri(config)
+    outputs = load_from_uri(config, data_home)
     return outputs
 
 
-__docstrings = """This function is that made the data_name of the following function unchangeable.
+__docstrings = \
+"""This function is that made the data_name of the following function unchangeable.
 ----------------------
 """ + fetch_shortext.__doc__
 
