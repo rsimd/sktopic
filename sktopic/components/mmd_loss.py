@@ -149,5 +149,20 @@ def prior_sample(
 
 
 class MMD(nn.Module):
-    def __init__(self, ) -> None:
+    def __init__(self, prior_name:str="dirichlet", kernel="diffusion", t:float=0.1, eps:float=1e-6, dirichlet_alpha:float=0.1) -> None:
         super().__init__()
+        self.prior_name = prior_name
+        self.t = t 
+        self.eps = eps
+        self.dirichlet_alpha = dirichlet_alpha
+        self.kernel = kernel
+
+    def forward(self, pred_theta:torch.Tensor)->torch.Tensor:
+        shape = pred_theta.size()
+        target_theta = prior_sample(shape,dirichlet_alpha=self.dirichlet_alpha, dtype=pred_theta.dtype, dist=self.prior_name)
+        
+        if self.kernel == "diffusion":
+            loss = mmd_loss_diffusion(pred_theta, target_theta,self.t,self.eps)
+            return loss
+        loss = mmd_loss_tv(pred_theta,target_theta)
+        return loss 
