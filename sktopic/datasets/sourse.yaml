@@ -48,3 +48,7 @@ PascalFlicker:
     https://raw.githubusercontent.com/qiang2100/STTM/master/dataset/Pascal_Flickr.txt
   labels:
     https://raw.githubusercontent.com/qiang2100/STTM/master/dataset/Pascal_Flickr_LABEL.txt
+
+Octis:
+  data_root:
+    "https://raw.githubusercontent.com/MIND-Lab/OCTIS/master/preprocessed_datasets"

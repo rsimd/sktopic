@@ -14,52 +14,40 @@ import time
 import urllib.error
 import urllib.request
 
+from scipy.sparse import data
+from .shorttext_sttm import download_file
+from .shorttext_sttm import load_cache as _load_cache
+
 __all__ = [
-    "fetch_SearchSnippets",
-    "fetch_StackOverflow",
-    "fetch_Biomedical",
-    "fetch_TrecTweet",
-    "fetch_GoogleNews",
-    "fetch_PascalFlicker",
+    "fetch_20NewsGroups",
+    "fetch_BBCNews", 
+    "fetch_DBLP", 
+    "fetch_M10",
 ]
 
 MODULE_PATH = rootpath.detect() + "/sktopic/datasets"
 
-def download_file(url:str,dst_path:str,mode="w")->None:
-    try:
-        with urllib.request.urlopen(url) as web_file:
-            data = web_file.read()
-            if "w" == mode:
-                data = data.decode('utf-8')
-            with open(dst_path, mode=mode) as local_file:
-                local_file.write(data)
-    except urllib.error.URLError as e:
-        print(e)
-
 def load_cache(data_dir:str)->dict[str,Any]:
-    X = sparse.load_npz("/".join([data_dir,"corpus.npz"]))
-    labels = pd.read_csv("/".join([data_dir,"labels.txt"]), header=None).values.T.squeeze()
-    with open("/".join([data_dir,"vocabulary.txt"])) as f:
-        vocabs = f.readlines()
-    id2word = {k:v for k,v in enumerate(vocabs)}
-    word2id = {v:k for k,v in id2word.items()}
-    df=pd.read_table("/".join([data_dir,"corpus.txt"]),header=None)
-    df.columns = ["doc"]
-    outputs = dict(
-        X=X, 
-        id2word=id2word,
-        word2id=word2id, 
-        labels=labels,
-        corpus = df.doc.to_list()
-    )
+    outputs = _load_cache(data_dir)
+    if isinstance(outputs["labels"][0], np.int64):
+        return outputs
+    outputs["label_names"] = list(set(outputs["labels"]))
+    outputs["labels"] = [outputs["label_names"].index(label) for label in outputs["labels"]]
     return outputs
 
-def load_from_uri(config:dict[str,str], data_home:Optional[str]=None)->dict[str,Any]:
+def load_from_uri(data_name,config:dict[str,str], data_home:Optional[str]=None)->dict[str,Any]:
     pandarallel.initialize()
     # download txt
-    df=pd.read_table(config.corpus,header=None)
+    #files = ["corpus.txt", "labels.txt", "vocabulary.txt", "metadata.json", "corpus.tsv"]
+    corpus_path = "/".join([config["data_root"],data_name,"corpus.txt"])
+    labels_path = "/".join([config["data_root"],data_name,"labels.txt"])
+    #vocab_path = "/".join([config["data_root"],data_name, "vocabulary.txt"])
+    meta_path = "/".join([config["data_root"], data_name,"metadata.json"])
+    tsv_path = "/".join([config["data_root"], data_name,"corpus.tsv"])
+
+    df=pd.read_table(corpus_path,header=None)
     df.columns = ["doc"]
-    labels = pd.read_csv(config.labels, header=None).values.T.squeeze()
+    labels = pd.read_csv(labels_path, header=None).values.T.squeeze()
     
     # split doc
     df["splited"] =  df.doc.parallel_apply(lambda line:line.split())
@@ -92,18 +80,31 @@ def load_from_uri(config:dict[str,str], data_home:Optional[str]=None)->dict[str,
     )
     if data_home is not None:
         # ファイルを保存
-        data_path = f"{data_home}/{config.name}"
+        data_path = f"{data_home}/{data_name}"
         try:
             os.makedirs(data_path)
         except:
             pass
         sparse.save_npz(f"{data_path}/corpus",X)
-        download_file(config.labels, f"{data_path}/labels.txt")
-        download_file(config.corpus, f"{data_path}/corpus.txt")
+        download_file(labels_path, f"{data_path}/labels.txt")
+        download_file(corpus_path, f"{data_path}/corpus.txt")
+        download_file(tsv_path, f"{data_path}/corpus.tsv")
+        download_file(meta_path, f"{data_path}/metadata.json")
+        
         with open(f"{data_path}/vocabulary.txt", "w") as f:
             vocabs = "\n".join([word for word in word2id.keys()])
             f.write(vocabs)
+        if not isinstance(outputs["labels"][0], np.int64):
+            with open(f"{data_path}/label_names.txt", "w") as f:
+                label_names = list(set(outputs["labels"]))
+                f.write("\n".join(label_names))
+    if isinstance(outputs["labels"][0], np.int64):
+        return outputs
+
+    outputs["label_names"] = label_names
+    outputs["labels"] = [label_names.index(label) for label in outputs["labels"]]
     return outputs
+
 
 def fetch_shortext(data_name:str,
     *,
@@ -111,7 +112,7 @@ def fetch_shortext(data_name:str,
     download_if_missing:bool=True,
     use_cache:bool=True,
     )->dict[str,Any]:
-    """fetch shorttext from https://github.com/qiang2100/STTM
+    """fetch shorttext from https://github.com/MIND-Lab/OCTIS
 
     Parameters
     ----------
@@ -154,30 +155,27 @@ def fetch_shortext(data_name:str,
             else:
                 raise IOError(msg)
     print("Download corpus...")
-    config = OmegaConf.load(f"{MODULE_PATH}/sourse.yaml")[data_name]
-    outputs = load_from_uri(config, data_home)
+    config = OmegaConf.load(f"{MODULE_PATH}/sourse.yaml")["Octis"]
+    outputs = load_from_uri(data_name, config, data_home)
+    
+
     return outputs
 
+#TODO labelsをstrからintへ、label_namesを別途用意.
 
 __docstrings = \
 """This function is that made the data_name of the following function unchangeable.
 ----------------------
 """ + fetch_shortext.__doc__
 
-fetch_SearchSnippets = partial(fetch_shortext,data_name="SearchSnippets")
-fetch_SearchSnippets.__doc__ = __docstrings
+fetch_20NewsGroups = partial(fetch_shortext,data_name="20NewsGroup")
+fetch_20NewsGroups.__doc__ = __docstrings
 
-fetch_StackOverflow = partial(fetch_shortext,data_name="StackOverflow")
-fetch_StackOverflow.__doc__ = __docstrings
+fetch_BBCNews = partial(fetch_shortext,data_name="BBC_news")
+fetch_BBCNews.__doc__ = __docstrings
 
-fetch_Biomedical = partial(fetch_shortext,data_name="Biomedical")
-fetch_Biomedical.__doc__ = __docstrings
+fetch_DBLP = partial(fetch_shortext,data_name="DBLP")
+fetch_DBLP.__doc__ = __docstrings
 
-fetch_TrecTweet = partial(fetch_shortext,data_name="TrecTweet")
-fetch_TrecTweet.__doc__ = __docstrings
-
-fetch_GoogleNews = partial(fetch_shortext,data_name="GoogleNews")
-fetch_GoogleNews.__doc__ = __docstrings
-
-fetch_PascalFlicker = partial(fetch_shortext,data_name="PascalFlicker")
-fetch_PascalFlicker.__doc__ = __docstrings
+fetch_M10 = partial(fetch_shortext,data_name="M10")
+fetch_M10.__doc__ = __docstrings
