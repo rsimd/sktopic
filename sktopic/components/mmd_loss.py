@@ -9,7 +9,13 @@ import torch.nn.functional as F
 from sklearn.mixture import GaussianMixture
 
 
-__all__ = ["mmd_loss_diffusion","mmd_loss_tv","prior_sample"]
+__all__ = [
+    "mmd_loss_diffusion",
+    "mmd_loss_tv",
+    "prior_sample",
+    "MMD",
+    "BoWCrossEntropy",
+    ]
 
 
 def diffusion_kernel(a:torch.Tensor, tmpt:float)->torch.Tensor:
@@ -166,3 +172,17 @@ class MMD(nn.Module):
             return loss
         loss = mmd_loss_tv(pred_theta,target_theta)
         return loss 
+
+
+class BoWCrossEntropy(nn.Module):
+    def __init__(self, pred_mode="logsoftmax") -> None:
+        super().__init__()
+        self.pred_mode = pred_mode
+
+    def forward(self, pred:torch.Tensor, target:torch.Tensor)->torch.Tensor:
+        if self.pred_mode == "logsoftmax":
+            return -(pred * target).sum(-1).mean()
+        if self.pred_mode == "softmax":
+            return -(pred.log() * target).sum(-1).mean()
+        if self.pred_mode == "logit":
+            return -(F.log_softmax(pred,-1)* target).sum(-1).mean()
