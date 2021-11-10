@@ -47,7 +47,8 @@ class H2GaussParams(nn.Module):
             )
         self.lv_q_theta = nn.Sequential(
             nn.Linear(dims[0],dims[1],True,device,dtype),
-            #nn.BatchNorm1d(dims[1]),
+            nn.BatchNorm1d(dims[1]),
+            nn.Tanh()
             )
         self.output_std=output_std
     
@@ -55,7 +56,7 @@ class H2GaussParams(nn.Module):
         loc = self.mu_q_theta(h)
         lv = self.lv_q_theta(h)
         #loc,lv = torch.split(h, split_size_or_sections=self.n_components, dim=-1)
-        scale = (0.5*lv).exp()
+        scale = (0.5*lv).exp() # std 1e-7, 88.7
         return loc,scale
 
 
@@ -227,11 +228,7 @@ class NTM(nn.Module):
             kld = kld.mean(1)
         kld = kld.sum()
         return dict(nll=nll,kld=kld, elbo=nll+kld)
-
-
-# TorchDistribution= TypeVar(
-#     name="TorchDistribution", 
-#     bound=torch.distributions.Distribution)
+        
 
 class ELBO(nn.Module):
     def __init__(self, mu=0,lv=1):
@@ -270,6 +267,4 @@ class ELBO(nn.Module):
     def culc_metrics(self, lnpx, x, posterior, model=None, **kwargs):
         AUX = {}
         #AUX["ppl"] = (-(lnpx * x).sum() / x.sum()).exp()
-
         return AUX
-

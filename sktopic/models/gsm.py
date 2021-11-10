@@ -16,7 +16,6 @@ class GSM(NTM):
             map_theta = GaussianSoftmaxConstruction(
             self.n_components,self.device,self.dtype
             ))
-        
 
 
 class GaussianSoftmaxModel(Trainer):

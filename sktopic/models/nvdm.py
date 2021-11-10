@@ -7,6 +7,8 @@ from torch.utils.data import DataLoader
 from skorch.dataset import CVSplit
 
 __all__ = ["NVDM","NeuralVariationalDocumentModel"]
+#TODO docstringの扱いを統一する必要がある
+#TODO get_topic_top_wordsをnativeだけではなく、Term Scoreでも取れるようにする必要がある。
 
 class NVDM(NTM):
     def __init__(self, dims:Sequence[int],embed_dim:Optional[int]=None, 

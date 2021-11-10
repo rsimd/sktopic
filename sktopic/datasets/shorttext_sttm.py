@@ -41,7 +41,7 @@ def load_cache(data_dir:str)->dict[str,Any]:
     labels = pd.read_csv("/".join([data_dir,"labels.txt"]), header=None).values.T.squeeze()
     with open("/".join([data_dir,"vocabulary.txt"])) as f:
         vocabs = f.readlines()
-    id2word = {k:v for k,v in enumerate(vocabs)}
+    id2word = {k:v.replace("\n","") for k,v in enumerate(vocabs)}
     word2id = {v:k for k,v in id2word.items()}
     df=pd.read_table("/".join([data_dir,"corpus.txt"]),header=None)
     df.columns = ["doc"]
