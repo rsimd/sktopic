@@ -371,9 +371,9 @@ class Trainer(skorch.NeuralNet, TransformerMixin):
         outputs = dict()
         outputs["topics"] = self.get_topic_top_words(id2word,topn=50).values.tolist()
         outputs["topic-word-matrix"] = self.module_.get_beta().detach().cpu().numpy()
-        outputs["topic-document-matrix"] = self.transform(X_tr, training=False)
+        outputs["topic-document-matrix"] = self.transform(X_tr, training=False).T
         if X_te is not None:
-            outputs["test-topic-document-matrix"] = self.transform(X_te, training=False)
+            outputs["test-topic-document-matrix"] = self.transform(X_te, training=False).T
         return outputs
 
     def set_pretrained_embeddings(self, embeddings:np.ndarray, trainable=False)->None:
