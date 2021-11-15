@@ -203,11 +203,12 @@ class BoWCrossEntropy(nn.Module):
             return -(F.log_softmax(pred,-1)* target).sum(-1).mean()
 
 class MMDLoss(nn.Module):
-    def __init__(self, prior_name:str="dirichlet", kernel="diffusion", t:float=0.1, eps:float=1e-6, dirichlet_alpha:float=0.1,pred_mode="logsoftmax", stochastic=True) -> None:
+    def __init__(self, prior_name:str="dirichlet", kernel="diffusion", t:float=0.1, eps:float=1e-6, dirichlet_alpha:float=0.1,pred_mode="logsoftmax", stochastic=True, cce_scaling:Optional[float]=None) -> None:
         super().__init__()
         self.mmd = MMD(prior_name,kernel,t,eps,dirichlet_alpha)
         self.cce = BoWCrossEntropy(pred_mode)
         self.stochastic = stochastic
+        self.cce_scaling = cce_scaling
 
     def forward(self, lnpx:torch.Tensor, x:torch.Tensor, posterior:Any, model=None, **kwargs):
         cce = self.cce(lnpx,x)
@@ -221,5 +222,12 @@ class MMDLoss(nn.Module):
         AUX = {}
         AUX["nll"] = cce
         AUX["mmd"] = mmd
-        AUX["loss"] = cce + mmd
+
+        cce_scaling = self.cce_scaling
+        if self.cce_scaling is None:
+            mean_length = x.sum(1).mean()
+            V = x.size(1)
+            cce_scaling = 1/(mean_length * torch.log(torch.tensor(V)))
+    
+        AUX["loss"] = cce * cce_scaling + mmd
         return AUX

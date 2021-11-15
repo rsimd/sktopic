@@ -1,4 +1,3 @@
-from operator import pos
 from typing import Callable, Optional, Any, OrderedDict, Sequence, Tuple, Union, TypeVar
 from more_itertools import windowed
 from numpy.core.fromnumeric import compress

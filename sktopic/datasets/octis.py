@@ -17,7 +17,7 @@ import urllib.request
 from scipy.sparse import data
 from .shorttext_sttm import download_file
 from .shorttext_sttm import load_cache as _load_cache
-
+from .corpus_container import CorpusContainer
 __all__ = [
     "fetch_20NewsGroups",
     "fetch_BBCNews", 
@@ -26,6 +26,7 @@ __all__ = [
 ]
 
 MODULE_PATH = rootpath.detect() + "/sktopic/datasets"
+
 
 def load_cache(data_dir:str)->dict[str,Any]:
     outputs = _load_cache(data_dir)
@@ -157,9 +158,8 @@ def fetch_shortext(data_name:str,
     print("Download corpus...")
     config = OmegaConf.load(f"{MODULE_PATH}/sourse.yaml")["Octis"]
     outputs = load_from_uri(data_name, config, data_home)
-    
 
-    return outputs
+    return CorpusContainer(**outputs)
 
 #TODO labelsをstrからintへ、label_namesを別途用意.
 

@@ -9,3 +9,6 @@ from .nvlda import NeuralVariationalLatentDirichletAllocation
 from .gsm import GaussianSoftmaxModel
 from .gsb import GaussianStickBreakingModel
 from .rsb import RecurrentStickBreakingModel
+
+# OT
+from .nstm import NeuralSinkhornTopicModel

@@ -13,6 +13,7 @@ import pprint
 import time
 import urllib.error
 import urllib.request
+from .corpus_container import CorpusContainer
 
 __all__ = [
     "fetch_SearchSnippets",
@@ -156,7 +157,7 @@ def fetch_shortext(data_name:str,
     print("Download corpus...")
     config = OmegaConf.load(f"{MODULE_PATH}/sourse.yaml")[data_name]
     outputs = load_from_uri(config, data_home)
-    return outputs
+    return CorpusContainer(**outputs)
 
 
 __docstrings = \

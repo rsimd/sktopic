@@ -2286,7 +2286,7 @@ termcolor = ">=1.1.0,<2.0.0"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.9"
-content-hash = "eac5b50f51ff0d60c827ff1eebdf30c5e8e413be95d808443fca4f549c27f63b"
+content-hash = "cddd5f6fe0eaefc86957757a3fc5de306a7b8632a0d841b0b7560774defe85a6"
 
 [metadata.files]
 antlr4-python3-runtime = [

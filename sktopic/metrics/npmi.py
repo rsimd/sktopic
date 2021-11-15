@@ -36,12 +36,21 @@ class NormalizedPointwiseMutualInformation:
         self.score_average:float
         self.scores:np.ndarray
 
+    def reflesh(self):
+        self.Dw = np.asarray(self.mask.sum(axis=0))[0]
+        self.co_occurence = {}
+        self.score_average = None
+        self.scores = None
+
     def __call__(
         self,
         topic_words:Sequence[Sequence[str]], 
         verbose:bool=True,
+        use_cache=True
         ) -> float:
-        
+        if not use_cache:
+            self.reflesh()
+            
         topic_words = [topic[:self.N] for topic in topic_words]
         topic_wordids:List[List[int]] = [[self.word2id[w] for w in line] for line in topic_words]
         del topic_words

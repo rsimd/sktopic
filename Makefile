@@ -10,4 +10,4 @@ build-package: ## Generate setup.py by poetry command for shared package
 	# setup.py を手元にコピー
 	cp dist/$(PACKAGE)-*/setup.py setup.py
 	# poetry build で生成されたファイルをすべて削除
-	rm -rf dist
+	#rm -rf dist
