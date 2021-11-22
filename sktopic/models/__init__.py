@@ -12,3 +12,4 @@ from .rsb import RecurrentStickBreakingModel
 
 # OT
 from .nstm import NeuralSinkhornTopicModel
+from .wlda import WassersteinLatentDirichletAllocation
