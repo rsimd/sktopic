@@ -23,6 +23,7 @@ hyperspherical-vae = {git = "https://github.com/nicola-decao/s-vae-pytorch.git"}
 pandarallel = "^1.5.4"
 rootpath = "^0.1.1"
 omegaconf = "^2.1.1"
+tensorflow-datasets = "^4.4.0"
 
 [tool.poetry.dev-dependencies]
 ipython = "^7.28.0"
