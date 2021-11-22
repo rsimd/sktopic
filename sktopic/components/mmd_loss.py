@@ -210,13 +210,16 @@ class MMDLoss(nn.Module):
         self.stochastic = stochastic
         self.cce_scaling = cce_scaling
 
-    def forward(self, lnpx:torch.Tensor, x:torch.Tensor, posterior:Any, model=None, **kwargs):
+    def forward(self, lnpx:torch.Tensor, x:torch.Tensor, posterior=None, model=None, theta=None, **kwargs):
         cce = self.cce(lnpx,x)
-        if self.stochastic:
-            pred_theta = posterior.rsample().to(x.device)
-        else:
-            pred_theta = posterior.mean.to(x.device)
-        pred_theta = model.decoder["map_theta"](pred_theta)
+        pred_theta = theta
+        if theta is None:
+            if self.stochastic:
+                pred_theta = posterior.rsample().to(x.device)
+            else:
+                pred_theta = posterior.mean.to(x.device)
+            pred_theta = model.decoder["map_theta"](pred_theta)
+
         mmd = self.mmd(pred_theta)
         
         AUX = {}
