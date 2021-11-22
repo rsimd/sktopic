@@ -1,4 +1,15 @@
 [[package]]
+name = "absl-py"
+version = "0.12.0"
+description = "Abseil Python Common Libraries, see https://github.com/abseil/abseil-py."
+category = "main"
+optional = false
+python-versions = "*"
+
+[package.dependencies]
+six = "*"
+
+[[package]]
 name = "antlr4-python3-runtime"
 version = "4.8"
 description = "ANTLR 4.8 runtime for Python 3.7"
@@ -64,7 +75,7 @@ wrapt = ">=1.11,<1.14"
 name = "attrs"
 version = "21.2.0"
 description = "Classes Without Boilerplate"
-category = "dev"
+category = "main"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*"
 
@@ -384,6 +395,14 @@ async = ["asgiref (>=3.2)"]
 dotenv = ["python-dotenv"]
 
 [[package]]
+name = "future"
+version = "0.18.2"
+description = "Clean single-source support for Python 3 and 2"
+category = "main"
+optional = false
+python-versions = ">=2.6, !=3.0.*, !=3.1.*, !=3.2.*"
+
+[[package]]
 name = "gensim"
 version = "4.1.2"
 description = "Python framework for fast Vector Space Modelling"
@@ -424,6 +443,20 @@ python-versions = ">=3.7"
 [package.dependencies]
 gitdb = ">=4.0.1,<5"
 typing-extensions = {version = ">=3.7.4.3", markers = "python_version < \"3.10\""}
+
+[[package]]
+name = "googleapis-common-protos"
+version = "1.53.0"
+description = "Common protobufs used in Google APIs"
+category = "main"
+optional = false
+python-versions = ">=3.6"
+
+[package.dependencies]
+protobuf = ">=3.12.0"
+
+[package.extras]
+grpc = ["grpcio (>=1.0.0)"]
 
 [[package]]
 name = "huggingface-hub"
@@ -1848,6 +1881,70 @@ python-versions = "*"
 widechars = ["wcwidth"]
 
 [[package]]
+name = "tensorflow-datasets"
+version = "4.4.0"
+description = "tensorflow/datasets is a library of datasets ready to use with TensorFlow."
+category = "main"
+optional = false
+python-versions = ">=3.6"
+
+[package.dependencies]
+absl-py = "*"
+attrs = ">=18.1.0"
+dill = "*"
+future = "*"
+numpy = "*"
+promise = "*"
+protobuf = ">=3.12.2"
+requests = ">=2.19.0"
+six = "*"
+tensorflow-metadata = "*"
+termcolor = "*"
+tqdm = "*"
+
+[package.extras]
+aflw2k3d = ["scipy"]
+c4 = ["apache-beam", "gcld3", "langdetect", "nltk", "tldextract"]
+cats_vs_dogs = ["matplotlib"]
+colorectal_histology = ["pillow"]
+common_voice = ["pydub"]
+dev = ["jupyter", "pytest", "pytest-xdist", "pandas", "pydub", "apache-beam", "pyyaml", "pylint (>=2.6.0)", "yapf"]
+duke_ultrasound = ["scipy"]
+eurosat = ["scikit-image", "tifffile", "imagecodecs"]
+groove = ["pretty-midi", "pydub"]
+gtzan = ["pydub"]
+imagenet2012_corrupted = ["opencv-python", "scikit-image", "scipy"]
+librispeech = ["pydub"]
+lsun = ["tensorflow-io"]
+matplotlib = ["matplotlib"]
+nsynth = ["crepe (>=0.0.11)", "librosa", "scikit-learn (==0.20.3)"]
+ogbg_molpcba = ["pandas", "networkx"]
+pet_finder = ["pandas"]
+robonet = ["h5py"]
+svhn = ["scipy"]
+tensorflow = ["tensorflow (>=2.1)"]
+tensorflow-data-validation = ["tensorflow-data-validation"]
+tests-all = ["jupyter", "pytest", "pytest-xdist", "pandas", "pydub", "apache-beam", "pyyaml", "scipy", "gcld3", "langdetect", "nltk", "tldextract", "matplotlib", "pillow", "scikit-image", "tifffile", "imagecodecs", "pretty-midi", "opencv-python", "networkx", "h5py", "mwparserfromhell", "bs4", "lxml", "pycocotools"]
+the300w_lp = ["scipy"]
+wider_face = ["pillow"]
+wikipedia = ["mwparserfromhell", "apache-beam"]
+wsc273 = ["bs4", "lxml"]
+youtube_vis = ["pycocotools"]
+
+[[package]]
+name = "tensorflow-metadata"
+version = "1.4.0"
+description = "Library and standards for schema and statistics."
+category = "main"
+optional = false
+python-versions = ">=3.7,<4"
+
+[package.dependencies]
+absl-py = ">=0.9,<0.13"
+googleapis-common-protos = ">=1.52.0,<2"
+protobuf = ">=3.13,<4"
+
+[[package]]
 name = "termcolor"
 version = "1.1.0"
 description = "ANSII Color formatting for output in terminal."
@@ -2286,9 +2383,13 @@ termcolor = ">=1.1.0,<2.0.0"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.9"
-content-hash = "cddd5f6fe0eaefc86957757a3fc5de306a7b8632a0d841b0b7560774defe85a6"
+content-hash = "bec2c60dd0810e2d6c02a8aaf6ad29e7d1375beaee12d4f537add75e17f22af8"
 
 [metadata.files]
+absl-py = [
+    {file = "absl-py-0.12.0.tar.gz", hash = "sha256:b44f68984a5ceb2607d135a615999b93924c771238a63920d17d3387b0d229d5"},
+    {file = "absl_py-0.12.0-py3-none-any.whl", hash = "sha256:afe94e3c751ff81aad55d33ab6e630390da32780110b5af72ae81ecff8418d9e"},
+]
 antlr4-python3-runtime = [
     {file = "antlr4-python3-runtime-4.8.tar.gz", hash = "sha256:15793f5d0512a372b4e7d2284058ad32ce7dd27126b105fb0b2245130445db33"},
 ]
@@ -2578,6 +2679,9 @@ flask = [
     {file = "Flask-2.0.2-py3-none-any.whl", hash = "sha256:cb90f62f1d8e4dc4621f52106613488b5ba826b2e1e10a33eac92f723093ab6a"},
     {file = "Flask-2.0.2.tar.gz", hash = "sha256:7b2fb8e934ddd50731893bdcdb00fc8c0315916f9fcd50d22c7cc1a95ab634e2"},
 ]
+future = [
+    {file = "future-0.18.2.tar.gz", hash = "sha256:b1bead90b70cf6ec3f0710ae53a525360fa360d306a86583adc6bf83a4db537d"},
+]
 gensim = [
     {file = "gensim-4.1.2-cp36-cp36m-macosx_10_9_x86_64.whl", hash = "sha256:1ff0171ec5b7473facb1441426a6b41e8ec4599fd62e1820868ab965804e3d4c"},
     {file = "gensim-4.1.2-cp36-cp36m-manylinux_2_12_x86_64.manylinux2010_x86_64.whl", hash = "sha256:3e34cfe767a8db52812826136d6e94863081fd1456726bd1ff40b4e25965fbb5"},
@@ -2604,6 +2708,10 @@ gitdb = [
 gitpython = [
     {file = "GitPython-3.1.24-py3-none-any.whl", hash = "sha256:dc0a7f2f697657acc8d7f89033e8b1ea94dd90356b2983bca89dc8d2ab3cc647"},
     {file = "GitPython-3.1.24.tar.gz", hash = "sha256:df83fdf5e684fef7c6ee2c02fc68a5ceb7e7e759d08b694088d0cacb4eba59e5"},
+]
+googleapis-common-protos = [
+    {file = "googleapis-common-protos-1.53.0.tar.gz", hash = "sha256:a88ee8903aa0a81f6c3cec2d5cf62d3c8aa67c06439b0496b49048fb1854ebf4"},
+    {file = "googleapis_common_protos-1.53.0-py2.py3-none-any.whl", hash = "sha256:f6d561ab8fb16b30020b940e2dd01cd80082f4762fa9f3ee670f4419b4b8dbd0"},
 ]
 huggingface-hub = [
     {file = "huggingface_hub-0.0.19-py3-none-any.whl", hash = "sha256:edcea87cbd709073a63fc911efa2d8fd8304f62cfe43f0bf497dec8eaac10369"},
@@ -3622,6 +3730,13 @@ subprocess32 = [
 tabulate = [
     {file = "tabulate-0.8.9-py3-none-any.whl", hash = "sha256:d7c013fe7abbc5e491394e10fa845f8f32fe54f8dc60c6622c6cf482d25d47e4"},
     {file = "tabulate-0.8.9.tar.gz", hash = "sha256:eb1d13f25760052e8931f2ef80aaf6045a6cceb47514db8beab24cded16f13a7"},
+]
+tensorflow-datasets = [
+    {file = "tensorflow-datasets-4.4.0.tar.gz", hash = "sha256:3e95a61dec1fdb7b05dabc0dbed1b531e13d6c6fd362411423d0a775e5e9b960"},
+    {file = "tensorflow_datasets-4.4.0-py3-none-any.whl", hash = "sha256:b373e7b724a357637d15f29a11bb7bef3dc62bd144defffe5fec1b8b4f6cf580"},
+]
+tensorflow-metadata = [
+    {file = "tensorflow_metadata-1.4.0-py3-none-any.whl", hash = "sha256:551f7193a2bd08d4f70c281ad0ba95d5055043fcace754ce5b8f45699fa8d09d"},
 ]
 termcolor = [
     {file = "termcolor-1.1.0.tar.gz", hash = "sha256:1d6d69ce66211143803fbc56652b41d73b4a400a2891d7bf7a1cdf4c02de613b"},

@@ -1,0 +1,20 @@
+embeddings:
+  w2v.3M.300d:
+    path: /workdir/datasets/w2v.default/w2v.3M.300d.bin.pkl
+    binary: True
+
+  glove.42B.300d:
+    path: /workdir/datasets/glove.42B/glove.42B.300d.bin.pkl
+    binary: True
+  
+  glove.6B.50d:
+    path: /workdir/datasets/glove.6B/glove.6B.50d.bin.pkl
+    binary: True
+
+  glove.6B.300d:
+    path: /workdir/datasets/glove.6B/glove.6B.300d.bin.pkl
+    binary: True
+
+dummy_embeddings:
+    path: /workdir/datasets/dummy_kv.txt
+    binary: False
