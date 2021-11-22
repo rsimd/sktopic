@@ -172,7 +172,7 @@ class NTM(nn.Module):
             OrderedDict(map_theta=map_theta,decoder=decoder)
             )
     
-    def forward(self,x:torch.Tensor, deterministic:Optional[bool]=None)->Tuple[torch.Tensor,torch.Tensor]:
+    def forward(self,x:torch.Tensor, deterministic:Optional[bool]=None)->dict[str,Any]:
         params = self.encoder(x)
         posterior = self.rt(*params)
         if deterministic is None:
@@ -214,6 +214,7 @@ class NTM(nn.Module):
 
     def get_beta(self):
         return self.decoder["decoder"].get_beta()
+        
 
     def get_loss(self, y_pred, input, posterior, **kwargs):
         nll = - torch.sum(input*y_pred, dim=1).mean()

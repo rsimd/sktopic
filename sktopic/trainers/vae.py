@@ -315,7 +315,7 @@ class Trainer(skorch.NeuralNet, TransformerMixin):
         return get_similar_words(self.module_.get_beta(), queries, id2word, topn)
 
     @torch.no_grad()
-    def get_topic_top_words(self, id2word:dict[int,str], topn:int=10)->pd.DataFrame:
+    def get_topic_top_words(self, id2word:dict[int,str], topn:int=10, decode=True)->pd.DataFrame:
         """Get DataFrame of Topic representation words
 
         Parameters
@@ -336,16 +336,21 @@ class Trainer(skorch.NeuralNet, TransformerMixin):
             Topic-Word distribution matrix's shape needs be (topic_dim, vocab_size)
         """
         self.module_.eval()
-        K = self.module_.n_components
-        V = self.module_.vocab_size
-        beta = self.module_.get_beta()
-        if beta.shape == (V, K):
-            beta = beta.T
-        elif beta.shape == (K, V):
-            pass
-        else:
-            raise ValueError("beta's shape needs be (topic_dim, vocab_size)")
+        beta = self.get_topic_word_distributions(decode=decode, numpy=False)
         return get_topic_top_words(beta, id2word,topn=topn)
+
+    @torch.no_grad()
+    def get_topic_word_distributions(self, safety=True, decode=True, numpy=True):
+        self.module_.eval()
+        if decode:
+            logbeta = self.module_.decoder["decoder"](torch.eye(self.module_.n_components).to(self.device))
+            if safety:
+                beta = F.normalize(logbeta.exp(), p=1,dim=1)
+                return to_numpy(beta) if numpy else beta
+            return to_numpy(logbeta.exp()) if numpy else logbeta.exp()
+        else:
+            beta = self.module_.get_beta()
+            return to_numpy(beta) if numpy else beta
 
     def get_model_outputs(self, X_tr:Any, X_te:Optional[Any]=None, id2word:dict[int,str]=None)->dict[str, Any]:
         """get output for octis.evaluation_metrics
@@ -370,7 +375,7 @@ class Trainer(skorch.NeuralNet, TransformerMixin):
         """
         outputs = dict()
         outputs["topics"] = self.get_topic_top_words(id2word,topn=50).values.tolist()
-        outputs["topic-word-matrix"] = self.module_.get_beta().detach().cpu().numpy()
+        outputs["topic-word-matrix"] = self.get_topic_word_distributions()#to_numpy(self.module_.get_beta())
         outputs["topic-document-matrix"] = self.transform(X_tr, training=False).T
         if X_te is not None:
             outputs["test-topic-document-matrix"] = self.transform(X_te, training=False).T
@@ -398,7 +403,7 @@ class Trainer(skorch.NeuralNet, TransformerMixin):
             )
         module.decoder["decoder"].word_embeddings.weight.requires_grad = trainable
 
-    def perplexity(self, X:Any, n_samples:int=-1, exp_fn:Callable=torch.exp, )->float:
+    def perplexity(self, X:Any,X_target=None, n_samples:int=-1, exp_fn:Callable=torch.exp, )->float:
         """Perplexity
 
         Parameters
@@ -416,21 +421,40 @@ class Trainer(skorch.NeuralNet, TransformerMixin):
             Perplexity score
         """
         self.module_.train(False)
-        if n_samples >=1 and isinstance(X, sparse.csr_matrix):
-            X = shuffle(X, n_samples=n_samples)
-        reduced_nll = 0.0
-        n_tokens = X.sum()
-        datasets = self.get_dataset(X)
-        for data in self.get_iterator(datasets,):
-            xi = data[0].to(self.device)
-            output = self.infer(xi)
-            lnpx = output["lnpx"]
-            reduced_nll += (lnpx * xi).sum() # torch.Tensor
-        
-        ppl = exp_fn(-reduced_nll / n_tokens)
-        return float(to_numpy(ppl))
+        if X_target is None:
+            if n_samples >=1 and isinstance(X, sparse.csr_matrix):
+                X = shuffle(X, n_samples=n_samples)
+            reduced_nll = 0.0
+            n_tokens = X.sum()
 
-    def perplexity_from_missing_bow(self, X, n_samples:int=-1, exp_fn:Callable=torch.exp, split_rate:float=0.5, seed=None)->float:
+            datasets = self.get_dataset(X)
+            for data in self.get_iterator(datasets,):
+                xi = data[0].to(self.device)
+                output = self.infer(xi)
+                lnpx = output["lnpx"]
+                reduced_nll += (lnpx * xi).sum() # torch.Tensor
+            
+            ppl = exp_fn(-reduced_nll / n_tokens)
+            return float(to_numpy(ppl))
+        else:
+            if n_samples >=1 and isinstance(X, sparse.csr_matrix):
+                X,X_target = shuffle(X,X_target, n_samples=n_samples)
+            reduced_nll = 0.0
+            n_tokens = X_target.sum()
+
+            datasets = self.get_dataset(X)
+            datasets2 = self.get_dataset(X_target)
+            for data,target in zip(self.get_iterator(datasets,),self.get_iterator(datasets2,)):
+                xi = data[0].to(self.device)
+                yi = target[0].to(self.device)
+                output = self.infer(xi)
+                lnpx = output["lnpx"]
+                reduced_nll += (lnpx * yi).sum() # torch.Tensor
+            
+            ppl = exp_fn(-reduced_nll / n_tokens)
+            return float(to_numpy(ppl))
+
+    def perplexity_from_missing_bow(self, X, n_samples:int=-1, n_experiments=10, exp_fn:Callable=torch.exp, split_rate:float=0.5, seed=None)->float:
         """Perplexity (Reconstruct from missing information)
 
         Parameters
@@ -458,7 +482,6 @@ class Trainer(skorch.NeuralNet, TransformerMixin):
         X_input = seq2bow(seq1, shape=X.shape)
         X_target = seq2bow(seq2, shape=X.shape)
         del seq, seq1, seq2
-
         
         n_tokens = X_target.sum()
         input_datasets = self.get_dataset(X_input)

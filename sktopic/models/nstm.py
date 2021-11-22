@@ -51,6 +51,11 @@ class NSTM(nn.Module):
             return torch.matmul(t, e.T)
         return F.normalize(self.beta.weight.T)
 
+    def decode(self, theta):
+        beta = self.get_beta() # (K,V)
+        lnpx = F.log_softmax(theta @ (1 + beta) , dim=1)
+        return lnpx
+
     def forward(self, x):
         θ = self.encoder(x)
         beta = self.get_beta() # (K,V)
@@ -81,8 +86,12 @@ class SinkhornLoss(Sinkhorn):
 
 class NeuralSinkhornTopicModel(Trainer):
     def __init__(self,
-            n_features:int, n_components:int, hidden_dims:Sequence[int]=None, 
-            embed_dim:int=None, activation:str="Softplus", dropout_rate:float=0.5,
+            n_features:int, 
+            n_components:int, 
+            hidden_dims:Sequence[int]=None, 
+            embed_dim:int=None, 
+            activation:str="Softplus", 
+            dropout_rate_hidden:float=0.5,
             criterion:Callable=SinkhornLoss,
             optimizer:Any=torch.optim.Adam,
             lr:float=0.01,
@@ -100,7 +109,7 @@ class NeuralSinkhornTopicModel(Trainer):
             **kwargs,
             ):
         super().__init__(
-            NSTM(n_features,n_components,hidden_dims,embed_dim,activation,dropout_rate),
+            NSTM(n_features,n_components,hidden_dims,embed_dim,activation,dropout_rate_hidden),
             criterion,
             optimizer=optimizer,
             lr=lr,
@@ -130,10 +139,21 @@ class NeuralSinkhornTopicModel(Trainer):
             ('print_log', PrintLog()),
 
         ]
+    @torch.no_grad()
+    def get_topic_word_distributions(self, safety=True, decode=True, numpy=True):
+        self.module_.eval()
+        if decode:
+            logbeta = self.module_.decode(torch.eye(self.module_.n_components).to(self.device))
+            beta = logbeta.exp()
+            if safety:
+                beta = F.normalize(beta, p=1,dim=1)            
+            return to_numpy(beta) if numpy else beta
+        else:
+            beta = self.module_.get_beta()
+            return to_numpy(beta) if numpy else beta
     
     def get_loss(self, x, topic_proportion, training=False, **kwargs):
         x = to_tensor(x, device=topic_proportion.device)
-
         if isinstance(self.criterion_, torch.nn.Module):
             self.criterion_.train(training)
         # (self, lnpx, x, posterior, model=None, **kwargs)
