@@ -81,4 +81,4 @@ class CorpusContainer:
         if self.labels is None:
             return 0
         l = self.get_labels()
-        return len(set(l.to_list()))
+        return len(set(l.tolist()))
