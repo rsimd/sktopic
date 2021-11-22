@@ -1,5 +1,6 @@
 from typing import Sequence, Any,Tuple
 import numpy as np
+from skorch.utils import to_numpy
 import torch
 import torch.nn as nn
 
@@ -64,4 +65,6 @@ class MeanSquaredCosineDeviatoinAmongTopics:
         #return torch.sum(torch.stack(tmp)) * (2.0/(K**2.0-K))
         return (summarized * (2.0 / (K**2.0-K)))**0.5
 
-
+    def score(self,model_output:dict[str,Sequence]):
+        output = to_numpy(self.__call__(torch.from_numpy(model_output["topic-word-matrix"])))
+        return float(output)
