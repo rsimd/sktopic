@@ -28,7 +28,7 @@ class TopicScoring(EpochScoring):
         super().__init__(self._scoring, lower_is_better=lower_is_better, on_train=False, name=name, target_extractor=..., use_caching=True)
 
     def _get_output(self, net)-> float:
-        topic_words = net.get_topic_top_words(self.id2word,topn=self.topn)
+        topic_words = net.get_topic_top_words(self.id2word,topn=self.topn, decode=False)
         topic_words = topic_words.values.tolist()
         
         model_output = {"topics": topic_words}
@@ -54,7 +54,7 @@ class WECoherenceScoring(TopicScoring):
         self.kv_path = kv_path
         self.method = method
         self.binary = binary
-
+        
         if coherence_object is None:
             if self.method == "centroid":
                 self.coherencemodel = coherence_metrics.WECoherenceCentroid(word2vec_path=self.kv_path,binary=self.binary,topk=topn)
