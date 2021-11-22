@@ -44,3 +44,4 @@ def manual_seed(seed:int=np.random.randint(0,2**20))->None:
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
     logger.info(f"Using: SEED={seed}")
+    return seed
