@@ -40,3 +40,4 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poe.tasks]
 force-cuda11 = "python -m pip install torch==1.10.0+cu113 -f https://download.pytorch.org/whl/cu113/torch_stable.html"
+install-palmetto = "bash scripts/install-palmetto.sh"
