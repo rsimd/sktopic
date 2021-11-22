@@ -2,7 +2,7 @@ import numpy as np
 from scipy import sparse
 from dataclasses import dataclass
 from sklearn.model_selection import train_test_split,StratifiedKFold,KFold
-
+from typing import Optional
 
 class CorpusContainer:
     def __init__(self,
@@ -11,7 +11,9 @@ class CorpusContainer:
     X:sparse.csr_matrix,
     labels: np.ndarray = None,
     corpus: list[str] = None,
-    label_names: list[str] = None,):
+    label_names: list[str] = None,
+    data_name:Optional[str]=None):
+    
         self.id2word = id2word 
         self.word2id = word2id
         self.X = X 
@@ -23,6 +25,7 @@ class CorpusContainer:
             self.labels = [self.label_names.index(key) for key in self.labels]
         self.V = self.X.shape[1]
         self.D = self.X.shape[0]
+        self.name = data_name
 
     @property
     def vocab_size(self):

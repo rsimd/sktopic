@@ -148,7 +148,7 @@ def fetch_shortext(data_name:str,
     if use_cache:
         try:
             outputs = load_cache(data_dir)
-            return CorpusContainer(**outputs)
+            return CorpusContainer(**outputs,data_name=data_name)
         except:
             msg = "The cache files does not exist."
             if download_if_missing:
@@ -159,7 +159,7 @@ def fetch_shortext(data_name:str,
     config = OmegaConf.load(f"{MODULE_PATH}/sourse.yaml")["Octis"]
     outputs = load_from_uri(data_name, config, data_home)
 
-    return CorpusContainer(**outputs)
+    return CorpusContainer(**outputs,data_name=data_name)
 
 #TODO labelsをstrからintへ、label_namesを別途用意.
 

@@ -147,7 +147,7 @@ def fetch_shortext(data_name:str,
     if use_cache:
         try:
             outputs = load_cache(data_dir)
-            return CorpusContainer(**outputs)
+            return CorpusContainer(**outputs,data_name=data_name)
         except:
             msg = "The cache files does not exist."
             if download_if_missing:
@@ -157,7 +157,7 @@ def fetch_shortext(data_name:str,
     print("Download corpus...")
     config = OmegaConf.load(f"{MODULE_PATH}/sourse.yaml")[data_name]
     outputs = load_from_uri(config, data_home)
-    return CorpusContainer(**outputs)
+    return CorpusContainer(**outputs,data_name=data_name)
 
 
 __docstrings = \
