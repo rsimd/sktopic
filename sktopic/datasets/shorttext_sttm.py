@@ -111,7 +111,7 @@ def fetch_shortext(data_name:str,
     data_home:str=None,
     download_if_missing:bool=True,
     use_cache:bool=True,
-    )->dict[str,Any]:
+    )->CorpusContainer:
     """fetch shorttext from https://github.com/qiang2100/STTM
 
     Parameters
@@ -147,7 +147,7 @@ def fetch_shortext(data_name:str,
     if use_cache:
         try:
             outputs = load_cache(data_dir)
-            return outputs
+            return CorpusContainer(**outputs)
         except:
             msg = "The cache files does not exist."
             if download_if_missing:
