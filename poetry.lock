@@ -1074,7 +1074,7 @@ python-versions = ">=3.7"
 
 [[package]]
 name = "octis"
-version = "1.9.0"
+version = "1.10.0"
 description = "octis: a library for Optimizing and Comparing Topic Models."
 category = "main"
 optional = false
@@ -3087,8 +3087,8 @@ numpy = [
     {file = "numpy-1.21.1.zip", hash = "sha256:dff4af63638afcc57a3dfb9e4b26d434a7a602d225b42d746ea7fe2edf1342fd"},
 ]
 octis = [
-    {file = "octis-1.9.0-py2.py3-none-any.whl", hash = "sha256:43f40cb8ef2958d1573ae572bb9caf5bf9634bf11b891da4ebd6e17827d0a32c"},
-    {file = "octis-1.9.0.tar.gz", hash = "sha256:714c1487aeff17b6445280026bc5242daf85d696b962991d83da24db88f1b14a"},
+    {file = "octis-1.10.0-py2.py3-none-any.whl", hash = "sha256:1936d10fe44dacb4a22b9d3e464b2abec1b8ac55d63b57b47ac0d09900a281cd"},
+    {file = "octis-1.10.0.tar.gz", hash = "sha256:957e36f629765b69914fb48651ab9fe3d70643e4dcf1900f6ec7f17b5ff72c89"},
 ]
 omegaconf = [
     {file = "omegaconf-2.1.1-py3-none-any.whl", hash = "sha256:be93d73eaa2564fbe52d88ee13e3b79f4c6e04876b2f326551a21391f7dc6367"},
