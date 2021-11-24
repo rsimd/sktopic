@@ -18,7 +18,7 @@ from .corpus_container import CorpusContainer
 __all__ = [
     "fetch_SearchSnippets",
     "fetch_StackOverflow",
-    "fetch_biomedicine",
+    "fetch_Biomedical",
     "fetch_TrecTweet",
     "fetch_GoogleNews",
     "fetch_PascalFlicker",
@@ -171,8 +171,8 @@ fetch_SearchSnippets.__doc__ = __docstrings
 fetch_StackOverflow = partial(fetch_shortext,data_name="StackOverflow")
 fetch_StackOverflow.__doc__ = __docstrings
 
-fetch_biomedicine = partial(fetch_shortext,data_name="biomedicine")
-fetch_biomedicine.__doc__ = __docstrings
+fetch_Biomedical = partial(fetch_shortext,data_name="Biomedical")
+fetch_Biomedical.__doc__ = __docstrings
 
 fetch_TrecTweet = partial(fetch_shortext,data_name="TrecTweet")
 fetch_TrecTweet.__doc__ = __docstrings

@@ -17,13 +17,13 @@ StackOverflow:
   labels:
     https://raw.githubusercontent.com/qiang2100/STTM/master/dataset/StackOverflow_label.txt
 
-biomedicine:
+Biomedical:
   name:
-    biomedicine
+    Biomedical
   corpus:
-    https://raw.githubusercontent.com/qiang2100/STTM/master/dataset/biomedicine.txt
+    https://raw.githubusercontent.com/qiang2100/STTM/master/dataset/Biomedical.txt
   labels:
-    https://raw.githubusercontent.com/qiang2100/STTM/master/dataset/biomedicine_label.txt
+    https://raw.githubusercontent.com/qiang2100/STTM/master/dataset/Biomedical_label.txt
 
 TrecTweet:
   name:

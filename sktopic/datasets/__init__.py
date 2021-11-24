@@ -1,7 +1,7 @@
 from .shorttext_sttm import (
     fetch_SearchSnippets,
     fetch_StackOverflow,
-    fetch_biomedicine,
+    fetch_Biomedical,
     fetch_TrecTweet,
     fetch_GoogleNews,
     fetch_PascalFlicker,
