@@ -1,4 +1,5 @@
-from typing import Callable, Optional, Any, OrderedDict, Sequence, Tuple, Union, TypeVar
+from sys import audit
+from typing import Callable, ForwardRef, Optional, Any, OrderedDict, Sequence, Tuple, Union, TypeVar
 from more_itertools import windowed
 from numpy.core.fromnumeric import compress
 import torch
@@ -7,10 +8,12 @@ from torch.distributions.normal import Normal
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.distributions import MultivariateNormal
+from torch.nn.modules import module
 
 from ..distributions import SoftmaxLogisticNormal
 from collections import OrderedDict
 from ..utils import normalizel2
+from ..components.regularizers import RegularizerUsingTopicEmbeddingsDiversity
 
 __all__ = [
     "Compressor",
@@ -23,7 +26,7 @@ __all__ = [
 
 class Compressor(nn.Sequential):
     def __init__(self, dims:Sequence[int], activation:Callable=nn.Softplus, 
-            dropout_rate:float=0.2, device=None, dtype=None)->None:
+            dropout_rate:float=0.2, device=None, dtype=None, input_normalize=True)->None:
         assert len(dims)>=2, "dims must have len(dims)=>2."
         layers = []
         for in_dim, out_dim in windowed(dims,2):
@@ -33,6 +36,12 @@ class Compressor(nn.Sequential):
             #nn.BatchNorm1d(dims[-1]),
             nn.Dropout(p=dropout_rate),
         )
+        self.input_normalize = input_normalize
+
+    def forward(self,x):
+        if self.input_normalize:
+            x = F.normalize(x,p=2,dim=1)
+        return super().forward(x)
 
 
 class H2GaussParams(nn.Module):
@@ -111,9 +120,11 @@ class Decoder(nn.Module):
             t = self.topic_embeddings.weight
             e = self.word_embeddings.weight
             # normalize
-            t = F.normalize(t)
-            e = F.normalize(e)
-            return torch.matmul(t, e.T)
+            #t = F.normalize(t,p=2,dim=1)
+            #e = F.normalize(e,p=2,dim=1)
+            #return t @ e.T
+            return F.normalize(t,  p=2,dim=1) @ F.normalize(e.T,p=2,dim=1)
+            
         return self.beta.weight.T
 
 
@@ -186,10 +197,8 @@ class NTM(nn.Module):
             # z /= self.n_sampling
         else:
             z = posterior.mean.to(x.device)
-
         θ = self.decoder["map_theta"](z)
         lnpx = self.decoder["decoder"](θ)
-
         return dict(
             topic_proportion=θ,
             posterior = posterior,
@@ -231,11 +240,13 @@ class NTM(nn.Module):
         
 
 class ELBO(nn.Module):
-    def __init__(self, mu=0,lv=1):
+    def __init__(self, mu=0,lv=1,regularizer_power=5.0):
         super().__init__()
         self.mu = mu
         self.lv = lv
         self._initilized = False
+        self.regularizer = RegularizerUsingTopicEmbeddingsDiversity()
+        self.regularizer_power = regularizer_power
 
     def forward(self, lnpx:torch.Tensor, x:torch.Tensor, posterior:Any, model=None, **kwargs):
         AUX = {}
@@ -251,8 +262,8 @@ class ELBO(nn.Module):
             torch.ones((1,self.n_components)).to(_device) * self.lv,
         )
         kld = kl_divergence(p_z, posterior)
-        if kld.ndim == 2:
-            kld = kld.mean(1)
+        # if kld.ndim == 2:
+        #     kld = kld.mean(1)
         kld = kld.sum()
         
         AUX["elbo"]=nll+kld
@@ -260,7 +271,10 @@ class ELBO(nn.Module):
         AUX["kld"]=kld
         
         AUX["loss"]=AUX["elbo"]
-        
+        if model.embed_dim is not None:
+            arccos = self.regularizer(model.decoder["decoder"].topic_embeddings.weight)
+            AUX["topic_arccos"] = arccos
+            AUX["loss"] = AUX["loss"] + self.regularizer_power * arccos
         AUX.update(self.culc_metrics(lnpx,x,posterior,model=model, **kwargs))
         return AUX
 

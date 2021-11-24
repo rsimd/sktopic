@@ -32,7 +32,7 @@ def topic_embeddings_diversity(topic_embeddings:torch.Tensor)->torch.Tensor:
     ρ = topic_embeddings
     K = topic_embeddings.size(0)
 
-    θ = cosine_similarity_matrix(ρ).arccos().nan_to_num()
+    θ = cosine_similarity_matrix(ρ).clip(-1,1).arccos()
     ζ = θ.sum() / K**2
     ν =  ((θ - ζ)**2).sum() / K**2
     diversity = ζ - ν

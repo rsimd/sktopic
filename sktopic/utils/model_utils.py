@@ -26,17 +26,18 @@ def get_kv(cfg_path="/workdir/datasets.yaml"):
 def override_word_embeddings(trainer:Any, dataset:CorpusContainer, keyedvectors:Optional[KeyedVectors]=None,train_embed:bool=False)->Any:
     self = trainer
     def get_emb(dataset, kv=keyedvectors,sample_token="test"):
-        import numpy as np 
-        import torch 
         embed_dim = len(kv[sample_token])
         id2word = dataset.id2word
         word_embeddings = []
+        num_unk = 0
         for key in id2word:
             if key in kv:
                 word_embeddings.append(kv[key])
             else:
                 word_embeddings.append(np.zeros(embed_dim,dtype=np.float32))
+                num_unk += 1
         word_embeddings = np.vstack(word_embeddings)
+        print("Number of Unknown words:", num_unk)
         return torch.from_numpy(word_embeddings).type(torch.float32)
     E = get_emb(dataset)
     try:
@@ -59,8 +60,8 @@ def eval_all(trainer:Any, dataset: CorpusContainer)->dict[str,float]:
         print("(1/3) Loading defaults------------------------------------")
         texts = [line.split() for line in dataset.corpus]
         
-        similarity_metrics.WordEmbeddingsCentroidSimilarity.binary = False
-        similarity_metrics.WordEmbeddingsPairwiseSimilarity.binary = False
+        #similarity_metrics.WordEmbeddingsCentroidSimilarity.binary = False # because https://github.com/MIND-Lab/OCTIS/issues/41 closed
+        #similarity_metrics.WordEmbeddingsPairwiseSimilarity.binary = False # because https://github.com/MIND-Lab/OCTIS/issues/41 closed
         outputs = dict(
             F1_lsvm=classification_metrics.F1Score(dataset, average="macro"),
             Precision_lsvm=classification_metrics.PrecisionScore(dataset, average="macro"),
@@ -85,7 +86,6 @@ def eval_all(trainer:Any, dataset: CorpusContainer)->dict[str,float]:
             NMI=NormalizedMutualInformation(dataset),
             )
             
-        
         if texts_external is not None:
             print("(2/3) Adding Wiki based COH-------------------------------")
             for key,_texts in texts_external:
