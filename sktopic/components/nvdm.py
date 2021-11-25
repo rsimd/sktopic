@@ -1,18 +1,14 @@
-from sys import audit
 from typing import Callable, ForwardRef, Optional, Any, OrderedDict, Sequence, Tuple, Union, TypeVar
 from more_itertools import windowed
-from numpy.core.fromnumeric import compress
 import torch
+#from ..distributions.rt import kl_divergence 
 from torch.distributions.kl import kl_divergence
-from torch.distributions.normal import Normal 
+#from ..distributions.rt import Normal 
+from torch.distributions.normal import Normal
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.distributions import MultivariateNormal
-from torch.nn.modules import module
 
-from ..distributions import SoftmaxLogisticNormal
 from collections import OrderedDict
-from ..utils import normalizel2
 from ..components.regularizers import RegularizerUsingTopicEmbeddingsDiversity
 
 __all__ = [
@@ -26,15 +22,18 @@ __all__ = [
 
 class Compressor(nn.Sequential):
     def __init__(self, dims:Sequence[int], activation:Callable=nn.Softplus, 
-            dropout_rate:float=0.2, device=None, dtype=None, input_normalize=True)->None:
+            dropout_rate:float=0.2, device=None, dtype=None, input_normalize=False)->None:
         assert len(dims)>=2, "dims must have len(dims)=>2."
         layers = []
         for in_dim, out_dim in windowed(dims,2):
-            layers += [nn.Linear(in_dim,out_dim,True,device,dtype), activation()]
+            layers += [
+                nn.Linear(in_dim,out_dim,True,device,dtype), 
+                nn.BatchNorm1d(out_dim), 
+                nn.AlphaDropout(p=dropout_rate),
+                activation(),
+                ]
         super().__init__(
             *layers,
-            #nn.BatchNorm1d(dims[-1]),
-            nn.Dropout(p=dropout_rate),
         )
         self.input_normalize = input_normalize
 
@@ -55,8 +54,8 @@ class H2GaussParams(nn.Module):
             )
         self.lv_q_theta = nn.Sequential(
             nn.Linear(dims[0],dims[1],True,device,dtype),
-            nn.BatchNorm1d(dims[1]),
-            nn.Tanh()
+            #nn.BatchNorm1d(dims[1]),
+            #nn.Tanh()
             )
         self.output_std=output_std
     
@@ -64,6 +63,7 @@ class H2GaussParams(nn.Module):
         loc = self.mu_q_theta(h)
         lv = self.lv_q_theta(h)
         #loc,lv = torch.split(h, split_size_or_sections=self.n_components, dim=-1)
+        #return loc,lv
         scale = (0.5*lv).exp() # std 1e-7, 88.7
         return loc,scale
 
@@ -80,53 +80,58 @@ class Decoder(nn.Module):
         self.embed_dim = embed_dim
         self.dtype = dtype
         self.device = device
-        self.dropout = nn.Dropout(p=dropout_rate)
+        self.dropout = nn.AlphaDropout(p=dropout_rate)
         self.use_bias = use_bias
         self.topic_model = topic_model
-        self.eps = 1e-7
+        self.eps = 1e-6
 
         self._set_beta()
         if self.topic_model:
             self.softmax = nn.Softmax(dim=-1)
         else:
             self.log_softmax = nn.LogSoftmax(dim=-1)
-            if self.use_bias:
-                self.bias = nn.Parameter(
-                    torch.zeros(size=(self.n_features,), device=device, dtype=dtype), 
-                    requires_grad=True, )
+        if self.use_bias:
+            self.bias = nn.Parameter(
+                torch.zeros(size=(self.n_features,), device=device, dtype=dtype), 
+                requires_grad=True, )
+
+    def _set_beta(self)->None:
+        if isinstance(self.embed_dim, int):
+            self.topic_embeddings = nn.Embedding(self.n_components, self.embed_dim,device=self.device, dtype=self.dtype,max_norm=1)
+            #self.topic_embeddings.weight = F.normalize(self.topic_embeddings.weight,p=2,dim=1)
+            self.word_embeddings = nn.Embedding(self.n_features, self.embed_dim,device=self.device, dtype=self.dtype,max_norm=1)
+            #self.word_embeddings.weight = F.normalize(self.word_embeddings.weight,p=2,dim=1)
+            
+            #self.topic_bias = nn.Parameter(torch.zeros(size=(self.n_components,1), device=self.device, dtype=self.dtype), requires_grad=True, )
+            #self.word_bias = nn.Parameter(torch.zeros(size=(self.n_features,1), device=self.device, dtype=self.dtype), requires_grad=True, )
+        else:
+            self.beta = nn.Embedding(self.n_features, self.n_components,device=self.device, dtype=self.dtype,)
+
+    def get_beta(self, eps=1e-7)->torch.Tensor:
+        if self.embed_dim:
+            t = self.topic_embeddings.weight # + self.topic_bias
+            e = self.word_embeddings.weight # + self.word_bias
+            return torch.matmul(
+                t,#F.normalize(t,p=2,dim=1),
+                e.T#F.normalize(e,p=2,dim=1).T,
+            )
+            
+        return self.beta.weight.T
 
     def forward(self,theta:torch.Tensor, )->torch.Tensor:
         theta = self.dropout(theta)
         beta = self.get_beta()
         if self.topic_model:
-            phi = self.softmax(beta)
+            if self.use_bias:
+                beta = beta+self.bias
+            phi = self.softmax(beta + self.eps)
             px = torch.matmul(theta, phi)
-            return torch.log(px + self.eps)
+            return torch.log(px)
         else:
             logit = torch.matmul(theta, beta)
             if self.use_bias:
-                logit += self.bias
+                logit =logit+self.bias + self.eps
             return self.log_softmax(logit)
-
-    def _set_beta(self)->None:
-        if isinstance(self.embed_dim, int):
-            self.topic_embeddings = nn.Embedding(self.n_components, self.embed_dim,device=self.device, dtype=self.dtype)
-            self.word_embeddings = nn.Embedding(self.n_features, self.embed_dim,device=self.device, dtype=self.dtype)
-        else:
-            self.beta = nn.Embedding(self.n_features, self.n_components,device=self.device, dtype=self.dtype)
-
-    def get_beta(self)->torch.Tensor:
-        if self.embed_dim:
-            t = self.topic_embeddings.weight
-            e = self.word_embeddings.weight
-            # normalize
-            #t = F.normalize(t,p=2,dim=1)
-            #e = F.normalize(e,p=2,dim=1)
-            #return t @ e.T
-            return F.normalize(t,  p=2,dim=1) @ F.normalize(e.T,p=2,dim=1)
-            
-        return self.beta.weight.T
-
 
 class NTM(nn.Module):
     def __init__(self, dims:Sequence[int],embed_dim:Optional[int]=None, 
@@ -184,27 +189,39 @@ class NTM(nn.Module):
             )
     
     def forward(self,x:torch.Tensor, deterministic:Optional[bool]=None)->dict[str,Any]:
-        params = self.encoder(x)
-        posterior = self.rt(*params)
         if deterministic is None:
             deterministic = not self.training
-
-        if not deterministic:
-            z = posterior.rsample().to(x.device)
-            # z = torch.zeros_like(posterior.loc)
-            # for _ in range(self.n_sampling):
-            #     z += posterior.rsample().to(x.device)
-            # z /= self.n_sampling
-        else:
+        
+        params = self.encoder(x)
+        posterior = self.rt(*params)
+        if deterministic:
             z = posterior.mean.to(x.device)
-        θ = self.decoder["map_theta"](z)
-        lnpx = self.decoder["decoder"](θ)
+            θ = self.decoder["map_theta"](z)
+            lnpx = self.decoder["decoder"](θ)
+            return dict(
+                topic_proportion=θ,
+                posterior = posterior,
+                lnpx=lnpx,
+                topic_dist = self.get_beta(),
+            )
+        # not deterministic
+        for n in range(self.n_sampling):
+            z = posterior.rsample().to(x.device)
+            θ = self.decoder["map_theta"](z)
+            assert not torch.isnan(θ).sum(), "θ has NaN."
+            lnpx = self.decoder["decoder"](θ)
+            assert not torch.isnan(lnpx).sum(), "lnpx has NaN."
+            if n ==0:
+                dump = lnpx
+            else:
+                dump = lnpx + dump
         return dict(
             topic_proportion=θ,
             posterior = posterior,
-            lnpx=lnpx,
+            lnpx= dump/ self.n_sampling,
             topic_dist = self.get_beta(),
         )
+        
 
     def transform(self, x:torch.Tensor, deterministic:Optional[bool]=None)->torch.Tensor:
         params = self.encoder(x)
@@ -240,13 +257,14 @@ class NTM(nn.Module):
         
 
 class ELBO(nn.Module):
-    def __init__(self, mu=0,lv=1,regularizer_power=5.0):
+    def __init__(self, mu=0,lv=1,arccos_lambda=5.0, l2_lambda = 0.01):
         super().__init__()
         self.mu = mu
         self.lv = lv
         self._initilized = False
         self.regularizer = RegularizerUsingTopicEmbeddingsDiversity()
-        self.regularizer_power = regularizer_power
+        self.arccos_lambda = arccos_lambda
+        self.l2_lambda = l2_lambda
 
     def forward(self, lnpx:torch.Tensor, x:torch.Tensor, posterior:Any, model=None, **kwargs):
         AUX = {}
@@ -255,27 +273,39 @@ class ELBO(nn.Module):
             self.dist = posterior.__class__
             self._initilized = True
 
-        nll = - torch.sum(x*lnpx, dim=1).mean()        
+        nll = - torch.sum(x*lnpx, dim=1).mean()     
         _device = lnpx.device
         p_z = self.dist(
             torch.ones((1,self.n_components)).to(_device) * self.mu,
             torch.ones((1,self.n_components)).to(_device) * self.lv,
         )
         kld = kl_divergence(p_z, posterior)
-        # if kld.ndim == 2:
-        #     kld = kld.mean(1)
-        kld = kld.sum()
+        if kld.ndim == 2:
+             kld = kld.sum(1)
+        kld = kld.mean()
         
         AUX["elbo"]=nll+kld
         AUX["nll"]=nll
         AUX["kld"]=kld
         
         AUX["loss"]=AUX["elbo"]
+        
+        norm_reg = torch.tensor(0.).to(nll.device)
+        for param in model.encoder.parameters():
+            if param.requires_grad:
+                norm_reg += torch.norm(param,p=1)
+        for param in model.decoder.parameters():
+            if param.requires_grad:
+                norm_reg += torch.norm(param,p=2)
+        AUX["norm_reg"]=norm_reg
+        AUX["loss"] += self.l2_lambda * norm_reg
+
         if model.embed_dim is not None:
             arccos = self.regularizer(model.decoder["decoder"].topic_embeddings.weight)
             AUX["topic_arccos"] = arccos
-            AUX["loss"] = AUX["loss"] + self.regularizer_power * arccos
+            AUX["loss"] = AUX["loss"] + self.arccos_lambda * arccos
         AUX.update(self.culc_metrics(lnpx,x,posterior,model=model, **kwargs))
+        assert not torch.isnan(AUX["loss"]).sum(), "Loss has NaN."
         return AUX
 
     def culc_metrics(self, lnpx, x, posterior, model=None, **kwargs):

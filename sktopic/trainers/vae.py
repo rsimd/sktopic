@@ -251,13 +251,13 @@ class Trainer(skorch.NeuralNet, TransformerMixin):
         return outputs
 
     def train_step(self, batch, **fit_params):
-        Xi, yi= batch
         self.module_.train()
-        #print(self._pseudo_labels)
         self.optimizer_.zero_grad()
+        Xi, yi= batch
         with torch.cuda.amp.autocast(enabled=self.use_amp):
             y_preds = self.infer(Xi,**fit_params)
             outputs = self.get_loss(y_preds["lnpx"], Xi, posterior=y_preds["posterior"], training=True, topic_proportion=y_preds["topic_proportion"])
+        assert not outputs["loss"].isnan()
         self.scaler.scale(outputs["loss"]).backward()
         self.scaler.step(self.optimizer_)
         self.scaler.update()

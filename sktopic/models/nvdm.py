@@ -42,6 +42,7 @@ class NeuralVariationalDocumentModel(Trainer):
             device:str='cpu',
             use_amp:bool = False,
             criterion:Callable=ELBO,
+            n_sampling=1,
             **kwargs,
             ):
         """ Sklearn like trainer for NeuralVariationalDocumentModel
@@ -92,7 +93,7 @@ class NeuralVariationalDocumentModel(Trainer):
         if hidden_dims is None:
             hidden_dims = [n_components*3,n_components*2]
         _dims = [vocab_size]+hidden_dims+[n_components]
-        _module = NVDM(_dims,embed_dim,activation_hidden,dropout_rate_hidden,dropout_rate_theta)
+        _module = NVDM(_dims,embed_dim,activation_hidden,dropout_rate_hidden,dropout_rate_theta,n_sampling=n_sampling)
         super().__init__(
             module=_module,
             criterion=criterion,

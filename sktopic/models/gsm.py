@@ -42,6 +42,7 @@ class GaussianSoftmaxModel(Trainer):
             device:str='cpu',
             use_amp:bool = False,
             criterion:Callable=ELBO,
+            n_sampling=1,
             **kwargs,
             ):
         """ Sklearn like trainer for GaussianSoftmaxModel
@@ -97,7 +98,7 @@ class GaussianSoftmaxModel(Trainer):
         _module = GSM(
             _dims,embed_dim,activation_hidden,
             dropout_rate_hidden,dropout_rate_theta,
-            topic_model=topic_model)
+            topic_model=topic_model,n_sampling=n_sampling)
         super().__init__(
             module=_module,
             criterion=criterion,

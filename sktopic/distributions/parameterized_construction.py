@@ -1,10 +1,9 @@
 from typing import Optional
 import torch
-from torch.distributions import constraints, Independent
-from torch.distributions.normal import Normal
-from torch.distributions.transforms import StickBreakingTransform
 import torch.nn as nn
 import torch.nn.functional as F
+
+from torch.distributions.transforms import StickBreakingTransform
 from torch.nn.modules.rnn import RNNCell
 
 __all__ = [

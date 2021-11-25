@@ -5,7 +5,9 @@ from ..components import NTM,ELBO
 from ..trainers.vae import Dataset, Trainer
 from torch.utils.data import DataLoader
 from skorch.dataset import CVSplit
+#from ..distributions.rt import kl_divergence
 from torch.distributions.kl import kl_divergence
+#from ..distributions.rt import SoftmaxLogisticNormal
 from ..distributions import SoftmaxLogisticNormal
 
 __all__ = ["NVLDA","NeuralVariationalLatentDirichletAllocation"]
@@ -57,6 +59,7 @@ class NeuralVariationalLatentDirichletAllocation(Trainer):
             device:str='cpu',
             use_amp:bool = False,
             criterion:Callable=ELBO,
+            n_sampling=1,
             **kwargs,
             ):
         """ Sklearn like trainer for NeuralVariationalLatentDirichletAllocation
@@ -107,7 +110,7 @@ class NeuralVariationalLatentDirichletAllocation(Trainer):
         if hidden_dims is None:
             hidden_dims = [n_components*3,n_components*2]
         _dims = [vocab_size]+hidden_dims+[n_components]
-        _module = NVLDA(_dims,embed_dim,activation_hidden,dropout_rate_hidden,dropout_rate_theta,alpha=prior_alpha)
+        _module = NVLDA(_dims,embed_dim,activation_hidden,dropout_rate_hidden,dropout_rate_theta,alpha=prior_alpha,n_sampling=n_sampling)
         super().__init__(
             module=_module,
             criterion=criterion,
