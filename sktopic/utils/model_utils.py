@@ -11,6 +11,8 @@ from sktopic.metrics import MeanSquaredCosineDeviatoinAmongTopics
 from sktopic.metrics.purity import Purity, NormalizedMutualInformation
 import yaml 
 import pickle
+import torch.nn.functional as F
+
 
 def get_kv(cfg_path="/workdir/datasets.yaml"):
     outputs = {}
@@ -23,7 +25,7 @@ def get_kv(cfg_path="/workdir/datasets.yaml"):
         outputs[key] = wv
     return outputs
 
-def override_word_embeddings(trainer:Any, dataset:CorpusContainer, keyedvectors:Optional[KeyedVectors]=None,train_embed:bool=False)->Any:
+def override_word_embeddings(trainer:Any, dataset:CorpusContainer, keyedvectors:Optional[KeyedVectors]=None,train_embed:Optional[bool]=None,normalize=False)->Any:
     self = trainer
     def get_emb(dataset, kv=keyedvectors,sample_token="test"):
         embed_dim = len(kv[sample_token])
@@ -40,16 +42,20 @@ def override_word_embeddings(trainer:Any, dataset:CorpusContainer, keyedvectors:
         print("Number of Unknown words:", num_unk)
         return torch.from_numpy(word_embeddings).type(torch.float32)
     E = get_emb(dataset)
+    if normalize:
+        E = F.normalize(E,p=2,dim=1)
     try:
         print("module has word_embeddings")
         assert self.module.word_embeddings.weight.data.shape == E.shape
         self.module.word_embeddings.weight.data = E
-        self.module.word_embeddings.weight.requires_grad_(train_embed)
+        if train_embed is not None:
+            self.module.word_embeddings.weight.requires_grad_(train_embed)
     except:
         print("module.decoder['decoder'] has word_embeddings")
         assert self.module.decoder["decoder"].word_embeddings.weight.data.shape == E.shape
         self.module.decoder["decoder"].word_embeddings.weight.data = E
-        self.module.decoder["decoder"].word_embeddings.weight.requires_grad_(train_embed)
+        if train_embed is not None:
+            self.module.decoder["decoder"].word_embeddings.weight.requires_grad_(train_embed)
     return self
 
 def eval_all(trainer:Any, dataset: CorpusContainer)->dict[str,float]:

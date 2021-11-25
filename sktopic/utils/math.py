@@ -61,3 +61,10 @@ def split_seq(seq:TokenSequence, rate:float=0.5, seed:int=None)->Tuple[TokenSequ
         part2.append(line[split_point:])
         
     return part1, part2
+
+def tree_map(func, dict_obj):
+    tmp = {}
+    for key in dict_obj:
+        val = dict_obj[key]
+        tmp[key] = func(val)
+    return tmp 
