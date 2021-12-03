@@ -203,14 +203,20 @@ class BoWCrossEntropy(nn.Module):
             return -(F.log_softmax(pred,-1)* target).sum(-1).mean()
 
 class MMDLoss(nn.Module):
-    def __init__(self, prior_name:str="dirichlet", kernel="diffusion", t:float=0.1, eps:float=1e-6, dirichlet_alpha:float=0.1,pred_mode="logsoftmax", stochastic=True, cce_scaling:Optional[float]=None) -> None:
+    def __init__(self, prior_name:str="dirichlet", kernel="diffusion", 
+    t:float=0.1, eps:float=1e-6, dirichlet_alpha:float=0.1,
+    pred_mode:str="logsoftmax", stochastic:bool=True, cce_scaling:Optional[float]=None, 
+    l1_lambda:float=0.001,l2_lambda:float=0.001) -> None:
         super().__init__()
         self.mmd = MMD(prior_name,kernel,t,eps,dirichlet_alpha)
         self.cce = BoWCrossEntropy(pred_mode)
         self.stochastic = stochastic
         self.cce_scaling = cce_scaling
+        self.l1_lambda = l1_lambda
+        self.l2_lambda = l2_lambda
 
     def forward(self, lnpx:torch.Tensor, x:torch.Tensor, posterior=None, model=None, theta=None, **kwargs):
+        _device = lnpx.device
         cce = self.cce(lnpx,x)
         pred_theta = theta
         if theta is None:
@@ -233,4 +239,19 @@ class MMDLoss(nn.Module):
             cce_scaling = 1/(mean_length * torch.log(torch.tensor(V)))
     
         AUX["loss"] = cce * cce_scaling + mmd
+
+        norm_reg = torch.tensor(0.).to(_device)
+        for param in model.encoder.parameters():
+            if param.requires_grad:
+                norm_reg += torch.norm(param,p=1)
+        AUX["l1norm_reg"]=norm_reg
+        AUX["loss"] += self.l1_lambda * norm_reg
+
+        norm_reg = torch.tensor(0.).to(_device)
+        for param in model.decoder.parameters():
+            if param.requires_grad:
+                norm_reg += torch.norm(param,p=2)
+        AUX["l2norm_reg"]=norm_reg
+        AUX["loss"] += self.l2_lambda * norm_reg
+        
         return AUX

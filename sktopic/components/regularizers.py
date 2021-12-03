@@ -11,7 +11,7 @@ def cosine_similarity_matrix(matrix:torch.Tensor) -> torch.Tensor:
     #norm = (matrix**2).sum(axis=1, keepdims=True) ** 0.5
     #s = d / norm / norm.T # (N, N)
     matrix = matrix.T
-    norm = (matrix * matrix).sum(0, keepdim=True) ** .5
+    norm = (matrix * matrix).sum(0, keepdim=True).sqrt()# ** .5
     m_norm = matrix/norm
     S = m_norm.T @ m_norm
     return S
@@ -32,9 +32,10 @@ def topic_embeddings_diversity(topic_embeddings:torch.Tensor)->torch.Tensor:
     ρ = topic_embeddings
     K = topic_embeddings.size(0)
 
-    θ = cosine_similarity_matrix(ρ).clip(-1,1).arccos()
-    ζ = θ.sum() / K**2
-    ν =  ((θ - ζ)**2).sum() / K**2
+    S = cosine_similarity_matrix(ρ).clamp(min=-1+1e-7,max=1-1e-7)
+    A = S.arccos() #θ = cosine_similarity_matrix(ρ).clip(-1,1).arccos()
+    ζ = A.mean()#θ.sum() / K**2
+    ν = ((A - ζ)**2).mean() #((θ - ζ)**2).sum() / K**2
     diversity = ζ - ν
     return -diversity
 

@@ -12,7 +12,8 @@ from sktopic.metrics.purity import Purity, NormalizedMutualInformation
 import yaml 
 import pickle
 import torch.nn.functional as F
-
+from sktopic.metrics.diversity import WETopicCentroidDistance
+from sktopic.metrics.wecoherence import WECoherenceCentroid,WECoherencePairwise
 
 def get_kv(cfg_path="/workdir/datasets.yaml"):
     outputs = {}
@@ -81,11 +82,11 @@ def eval_all(trainer:Any, dataset: CorpusContainer)->dict[str,float]:
             Cocherence_npmi=coherence_metrics.Coherence(measure='c_npmi',texts=texts),
             TopicDiversity=diversity_metrics.TopicDiversity(),
             External_InvertedRBO=diversity_metrics.InvertedRBO(),
-            LogOddsRatio=diversity_metrics.LogOddsRatio(),
-            TopicDistributions_KLDivergence=diversity_metrics.KLDivergence(),
-            Internal_RBO=similarity_metrics.RBO(),
-            KL_uniform=topic_significance_metrics.KL_uniform(),
-            KL_vacuous=topic_significance_metrics.KL_vacuous(),
+            #LogOddsRatio=diversity_metrics.LogOddsRatio(),
+            #TopicDistributions_KLDivergence=diversity_metrics.KLDivergence(),
+            #Internal_RBO=similarity_metrics.RBO(), # InvertedRBOの逆。ほんとにそのまんまで意味無し
+            #KL_uniform=topic_significance_metrics.KL_uniform(),
+            #KL_vacuous=topic_significance_metrics.KL_vacuous(),
             KL_background=topic_significance_metrics.KL_background(),
             MeanSquaredCosineDeviatoinAmongTopics=MeanSquaredCosineDeviatoinAmongTopics(),
             Purity=Purity(dataset),
@@ -106,13 +107,14 @@ def eval_all(trainer:Any, dataset: CorpusContainer)->dict[str,float]:
         def get_wc_metrics_(suffix=None, wv=None):
             tmp = dict(
             WECoherencePairwise=coherence_metrics.WECoherencePairwise(word2vec_path=dummy_kv_path),
-            WECoherenceCentroid=coherence_metrics.WECoherenceCentroid(word2vec_path=dummy_kv_path),               
-            External_WordEmbeddingsInvertedRBO=diversity_metrics.WordEmbeddingsInvertedRBO(word2vec_path=dummy_kv_path),
-            External_WordEmbeddingsInvertedRBOCentroid=diversity_metrics.WordEmbeddingsInvertedRBOCentroid(word2vec_path=dummy_kv_path),
-            Internal_WordEmbeddingsRBOMatch=similarity_metrics.WordEmbeddingsRBOMatch(word2vec_path=dummy_kv_path),
-            Internal_WordEmbeddingsRBOCentroid=similarity_metrics.WordEmbeddingsRBOCentroid(word2vec_path=dummy_kv_path),
-            Internal_WordEmbeddingsPairwiseSimilarity=similarity_metrics.WordEmbeddingsPairwiseSimilarity(word2vec_path=dummy_kv_path),
-            Internal_WordEmbeddingsCentroidSimilarity=similarity_metrics.WordEmbeddingsCentroidSimilarity(word2vec_path=dummy_kv_path),
+            WECoherenceCentroid=WECoherenceCentroid(word2vec_path=dummy_kv_path),               
+            #External_WordEmbeddingsInvertedRBO=diversity_metrics.WordEmbeddingsInvertedRBO(word2vec_path=dummy_kv_path),
+            #External_WordEmbeddingsInvertedRBOCentroid=diversity_metrics.WordEmbeddingsInvertedRBOCentroid(word2vec_path=dummy_kv_path),
+            #Internal_WordEmbeddingsRBOMatch=similarity_metrics.WordEmbeddingsRBOMatch(word2vec_path=dummy_kv_path),
+            #Internal_WordEmbeddingsRBOCentroid=similarity_metrics.WordEmbeddingsRBOCentroid(word2vec_path=dummy_kv_path),
+            #Internal_WordEmbeddingsPairwiseSimilarity=similarity_metrics.WordEmbeddingsPairwiseSimilarity(word2vec_path=dummy_kv_path),
+            #nternal_WordEmbeddingsCentroidSimilarity=similarity_metrics.WordEmbeddingsCentroidSimilarity(word2vec_path=dummy_kv_path),
+            WETopicCentroidDistance=WETopicCentroidDistance(word2vec_path=dummy_kv_path),
             )
             if suffix==None:
                 a = coherence_metrics.WECoherencePairwise()
@@ -142,7 +144,8 @@ def eval_all(trainer:Any, dataset: CorpusContainer)->dict[str,float]:
         for key,method in tqdm(metrics_dict.items()):
             try:
                 results[key] = method.score(output)
-            except:
+            except Exception as e:
+                print(e)
                 results[key] = np.nan
         return results
 

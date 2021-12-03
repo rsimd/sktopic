@@ -28,6 +28,7 @@ install_requires = \
  'rootpath>=0.1.1,<0.2.0',
  'seaborn>=0.11.2,<0.12.0',
  'skorch @ git+https://github.com/skorch-dev/skorch.git@release-0.11.0',
+ 'tensorflow-datasets>=4.4.0,<5.0.0',
  'toolz>=0.11.1,<0.12.0',
  'torch>=1.10.0,<2.0.0',
  'tqdm>=4.62.3,<5.0.0',

@@ -50,11 +50,13 @@ class H2GaussParams(nn.Module):
         self.n_components = dims[1]
         self.mu_q_theta = nn.Sequential(
             nn.Linear(dims[0],dims[1],True,device,dtype),
-            #nn.BatchNorm1d(dims[1]),
+            nn.Softplus(),
+            nn.BatchNorm1d(dims[1]),
             )
         self.lv_q_theta = nn.Sequential(
             nn.Linear(dims[0],dims[1],True,device,dtype),
-            #nn.BatchNorm1d(dims[1]),
+            nn.Softplus(),
+            nn.BatchNorm1d(dims[1]),
             #nn.Tanh()
             )
         self.output_std=output_std
@@ -64,13 +66,15 @@ class H2GaussParams(nn.Module):
         lv = self.lv_q_theta(h)
         #loc,lv = torch.split(h, split_size_or_sections=self.n_components, dim=-1)
         #return loc,lv
-        scale = (0.5*lv).exp() # std 1e-7, 88.7
+        #lv = F.tanh(lv)
+        scale = (0.5*lv).exp()
+        #scale = torch.clamp(scale, min=1e-6,max=1.0) # std 1e-7, 88.7
         return loc,scale
 
 
 class Decoder(nn.Module):
     def __init__(self, dims: Sequence[int], embed_dim:Optional[int]=None,
-            dropout_rate:float=0.2, use_bias: bool=True, 
+            dropout_rate:float=0.0, use_bias: bool=True, 
             device=None, dtype=None, topic_model:bool=False):
         super().__init__()
         assert len(dims)==2, "dims must have len(dims)==2"
@@ -107,36 +111,37 @@ class Decoder(nn.Module):
         else:
             self.beta = nn.Embedding(self.n_features, self.n_components,device=self.device, dtype=self.dtype,)
 
-    def get_beta(self, eps=1e-7)->torch.Tensor:
+    def get_beta(self)->torch.Tensor:
         if self.embed_dim:
             t = self.topic_embeddings.weight # + self.topic_bias
             e = self.word_embeddings.weight # + self.word_bias
-            return torch.matmul(
+            return F.linear(
                 t,#F.normalize(t,p=2,dim=1),
-                e.T#F.normalize(e,p=2,dim=1).T,
+                e #F.normalize(e,p=2,dim=1).T,
             )
             
         return self.beta.weight.T
 
-    def forward(self,theta:torch.Tensor, )->torch.Tensor:
+    def forward(self,theta:torch.Tensor)->torch.Tensor:
         theta = self.dropout(theta)
+        #assert theta.sum() == theta.size(0),theta.sum()
         beta = self.get_beta()
         if self.topic_model:
             if self.use_bias:
                 beta = beta+self.bias
-            phi = self.softmax(beta + self.eps)
+            phi = self.softmax(beta)
             px = torch.matmul(theta, phi)
             return torch.log(px)
         else:
             logit = torch.matmul(theta, beta)
             if self.use_bias:
-                logit =logit+self.bias + self.eps
+                logit =logit+self.bias #+ self.eps
             return self.log_softmax(logit)
 
 class NTM(nn.Module):
     def __init__(self, dims:Sequence[int],embed_dim:Optional[int]=None, 
             activation_hidden:str="Tanh",
-            dropout_rate_hidden:float=0.2, dropout_rate_theta:float=0.2, 
+            dropout_rate_hidden:float=0.2, dropout_rate_theta:float=0.0, 
             device:Any=None, dtype:Any=None, topic_model:bool=False, n_sampling:int=1):
         super().__init__()
         assert len(dims)>=3, "dims must have len(dims)>=3." 
@@ -211,7 +216,7 @@ class NTM(nn.Module):
             assert not torch.isnan(θ).sum(), "θ has NaN."
             lnpx = self.decoder["decoder"](θ)
             assert not torch.isnan(lnpx).sum(), "lnpx has NaN."
-            if n ==0:
+            if n==0:
                 dump = lnpx
             else:
                 dump = lnpx + dump
@@ -257,13 +262,19 @@ class NTM(nn.Module):
         
 
 class ELBO(nn.Module):
-    def __init__(self, mu=0,lv=1,arccos_lambda=5.0, l2_lambda = 0.01):
+    def __init__(self, 
+    mu:float=0.0,lv:float=1.0, 
+    arccos_lambda:float=5.0, 
+    l1_lambda:float=0.001,
+    l2_lambda:float=0.001,
+    ):
         super().__init__()
         self.mu = mu
         self.lv = lv
         self._initilized = False
         self.regularizer = RegularizerUsingTopicEmbeddingsDiversity()
         self.arccos_lambda = arccos_lambda
+        self.l1_lambda = l1_lambda
         self.l2_lambda = l2_lambda
 
     def forward(self, lnpx:torch.Tensor, x:torch.Tensor, posterior:Any, model=None, **kwargs):
@@ -273,7 +284,7 @@ class ELBO(nn.Module):
             self.dist = posterior.__class__
             self._initilized = True
 
-        nll = - torch.sum(x*lnpx, dim=1).mean()     
+        nll = -(x*lnpx).sum(1).mean()     
         _device = lnpx.device
         p_z = self.dist(
             torch.ones((1,self.n_components)).to(_device) * self.mu,
@@ -281,27 +292,29 @@ class ELBO(nn.Module):
         )
         kld = kl_divergence(p_z, posterior)
         if kld.ndim == 2:
-             kld = kld.sum(1)
+            kld = kld.mean(1)
         kld = kld.mean()
-        
         AUX["elbo"]=nll+kld
         AUX["nll"]=nll
         AUX["kld"]=kld
-        
         AUX["loss"]=AUX["elbo"]
         
-        norm_reg = torch.tensor(0.).to(nll.device)
+        norm_reg = torch.tensor(0.).to(_device)
         for param in model.encoder.parameters():
             if param.requires_grad:
                 norm_reg += torch.norm(param,p=1)
+        AUX["l1norm_reg"]=norm_reg
+        AUX["loss"] += self.l1_lambda * norm_reg
+
+        norm_reg = torch.tensor(0.).to(_device)
         for param in model.decoder.parameters():
             if param.requires_grad:
                 norm_reg += torch.norm(param,p=2)
-        AUX["norm_reg"]=norm_reg
+        AUX["l2norm_reg"]=norm_reg
         AUX["loss"] += self.l2_lambda * norm_reg
 
         if model.embed_dim is not None:
-            arccos = self.regularizer(model.decoder["decoder"].topic_embeddings.weight)
+            arccos = self.regularizer(model.decoder["decoder"].topic_embeddings.weight) #(K,L)
             AUX["topic_arccos"] = arccos
             AUX["loss"] = AUX["loss"] + self.arccos_lambda * arccos
         AUX.update(self.culc_metrics(lnpx,x,posterior,model=model, **kwargs))

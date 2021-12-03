@@ -206,9 +206,9 @@ class Trainer(skorch.NeuralNet, TransformerMixin):
         return [
             ('epoch_timer', EpochTimer()),
             ("valid_ppl", PerplexityScoring(on_train=False)),
-            ("train_ppl", PerplexityScoring(on_train=True)),
+            #("train_ppl", PerplexityScoring(on_train=True)),
             ('logging_valid_ppl', PassthroughScoring(name='valid_ppl')),
-            ('logging_train_ppl', PassthroughScoring(name='train_ppl',on_train=True)),
+            #('logging_train_ppl', PassthroughScoring(name='train_ppl',on_train=True)),
             ('train_loss', PassthroughScoring(name='train_loss',on_train=True)),
             ('valid_loss', PassthroughScoring(name='valid_loss')),
             ('print_log', PrintLog()),
@@ -257,13 +257,13 @@ class Trainer(skorch.NeuralNet, TransformerMixin):
         with torch.cuda.amp.autocast(enabled=self.use_amp):
             y_preds = self.infer(Xi,**fit_params)
             outputs = self.get_loss(y_preds["lnpx"], Xi, posterior=y_preds["posterior"], training=True, topic_proportion=y_preds["topic_proportion"])
-        assert not outputs["loss"].isnan()
+        #assert not outputs["loss"].isnan().item()
         self.scaler.scale(outputs["loss"]).backward()
         self.scaler.step(self.optimizer_)
         self.scaler.update()
         self.record_to_history(outputs, prefix="train")
         return dict(y_pred=y_preds["lnpx"], **outputs )
-
+    
     @torch.no_grad()
     def validation_step(self, batch, **fit_params):
         Xi, yi = batch
@@ -272,7 +272,7 @@ class Trainer(skorch.NeuralNet, TransformerMixin):
             y_preds = self.infer(Xi,**fit_params)
             outputs = self.get_loss(y_preds["lnpx"],Xi, posterior=y_preds["posterior"],training=False, topic_proportion=y_preds["topic_proportion"])
         self.record_to_history(outputs, prefix="valid")
-        return dict(y_pred=y_preds["lnpx"], **outputs )
+        return dict(y_pred=y_preds["lnpx"], **outputs)
 
     @torch.no_grad()
     def evaluation_step(self, batch, **fit_params):
@@ -282,7 +282,7 @@ class Trainer(skorch.NeuralNet, TransformerMixin):
             y_preds = self.infer(Xi,**fit_params)
             outputs = self.get_loss(y_preds["lnpx"],Xi, posterior=y_preds["posterior"],training=False, topic_proportion=y_preds["topic_proportion"])
         #self.record_to_history(aux, prefix="valid")
-        return dict(y_pred=y_preds["lnpx"], **outputs )
+        return dict(y_pred=y_preds["lnpx"], **outputs)
 
     def infer(self, x, **fit_params):
         #print(type(x), x)
@@ -340,7 +340,7 @@ class Trainer(skorch.NeuralNet, TransformerMixin):
         return get_topic_top_words(beta, id2word,topn=topn)
 
     @torch.no_grad()
-    def get_topic_word_distributions(self, safety=True, decode=True, numpy=True):
+    def get_topic_word_distributions(self, decode=False, safety=True, numpy=True):
         self.module_.eval()
         if decode:
             logbeta = self.module_.decoder["decoder"](torch.eye(self.module_.n_components).to(self.device))
@@ -352,7 +352,7 @@ class Trainer(skorch.NeuralNet, TransformerMixin):
             beta = self.module_.get_beta()
             return to_numpy(beta) if numpy else beta
 
-    def get_model_outputs(self, X_tr:Any, X_te:Optional[Any]=None, id2word:dict[int,str]=None)->dict[str, Any]:
+    def get_model_outputs(self, X_tr:Any, X_te:Optional[Any]=None, id2word:dict[int,str]=None, decode=False)->dict[str, Any]:
         """get output for octis.evaluation_metrics
 
         Parameters
@@ -374,8 +374,8 @@ class Trainer(skorch.NeuralNet, TransformerMixin):
                 test-topic-document-matrix: the document topic matrix of the test set.
         """
         outputs = dict()
-        outputs["topics"] = self.get_topic_top_words(id2word,topn=50).values.tolist()
-        outputs["topic-word-matrix"] = self.get_topic_word_distributions()#to_numpy(self.module_.get_beta())
+        outputs["topics"] = self.get_topic_top_words(id2word,topn=50,decode=decode).values.tolist()
+        outputs["topic-word-matrix"] = self.get_topic_word_distributions(decode=decode,numpy=True)#to_numpy(self.module_.get_beta())
         outputs["topic-document-matrix"] = self.transform(X_tr, training=False).T
         if X_te is not None:
             outputs["test-topic-document-matrix"] = self.transform(X_te, training=False).T

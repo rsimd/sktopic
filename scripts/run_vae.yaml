@@ -1,0 +1,25 @@
+model_name: RecurrentStickBreakingModel
+corpus_name: M10
+use_pwe: False
+train_pwe: False
+
+model:
+  n_components: 50
+  embed_dim: 300
+  batch_size: 1000
+  lr: 0.01
+  lr_dec: 0.01
+  max_epochs: 200  
+  device: cuda
+  activation_hidden: Softplus
+  arccos_lambda: 10
+  l1_lambda: 0.001
+  l2_lambda: 0.001
+  dropout_rate_theta: 0.0
+  dropout_rate_hidden: 0.2
+  n_sampling: 1
+
+wandb:
+  entity: rsimd
+  project: NTMF_finetune
+  job_type: search

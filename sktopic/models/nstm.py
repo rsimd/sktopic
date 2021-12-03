@@ -14,6 +14,15 @@ from skorch.utils import to_device,to_numpy,to_tensor
 from sktopic.callbacks import PerplexityScoring
 from skorch.callbacks import PassthroughScoring,EpochTimer,PrintLog
 
+class GumbelSoftmax(nn.Module):
+    def __init__(self,hard=False,eps=1e-10,dim=-1):
+        super().__init__()
+        self.hard = hard 
+        self.eps = eps
+        self.dim = dim
+
+    def forward(self,logits,tau=1):
+        return F.gumbel_softmax(logits,tau, self.hard, self.eps, self.dim)
 class NSTM(nn.Module):
     def __init__(self, vocab_size:int, n_components:int, hidden_dims:Sequence[int]=None, embed_dim:int=None, activation:str="Softplus", dropout_rate:float=0.5, device="cpu", dtype:Any=torch.float32) -> None:
         super().__init__()
@@ -31,6 +40,7 @@ class NSTM(nn.Module):
             Compressor(dims, _activation, dropout_rate=dropout_rate,device=self.device, dtype=self.dtype),
             nn.BatchNorm1d(n_components),
             nn.Softmax(dim=1),
+            #GumbelSoftmax(),
         )
         self._set_beta()
 
@@ -90,7 +100,7 @@ class NeuralSinkhornTopicModel(Trainer):
             n_components:int, 
             hidden_dims:Sequence[int]=None, 
             embed_dim:int=None, 
-            activation:str="Softplus", 
+            activation_hidden:str="Softplus", 
             dropout_rate_hidden:float=0.5,
             criterion:Callable=SinkhornLoss,
             optimizer:Any=torch.optim.Adam,
@@ -109,7 +119,7 @@ class NeuralSinkhornTopicModel(Trainer):
             **kwargs,
             ):
         super().__init__(
-            NSTM(n_features,n_components,hidden_dims,embed_dim,activation,dropout_rate_hidden),
+            NSTM(n_features,n_components,hidden_dims,embed_dim,activation_hidden,dropout_rate_hidden),
             criterion,
             optimizer=optimizer,
             lr=lr,
@@ -140,7 +150,7 @@ class NeuralSinkhornTopicModel(Trainer):
 
         ]
     @torch.no_grad()
-    def get_topic_word_distributions(self, safety=True, decode=True, numpy=True):
+    def get_topic_word_distributions(self, decode=False, safety=True, numpy=True):
         self.module_.eval()
         if decode:
             logbeta = self.module_.decode(torch.eye(self.module_.n_components).to(self.device))

@@ -6,7 +6,8 @@ from skorch.callbacks import Callback, EpochScoring
 from skorch.callbacks.scoring import _cache_net_forward_iter, convert_sklearn_metric_function
 from torch.optim.optimizer import Optimizer
 from octis.evaluation_metrics import coherence_metrics
-from octis.evaluation_metrics import diversity_metrics 
+from octis.evaluation_metrics import diversity_metrics
+from sktopic.metrics import wecoherence as coherence_metrics2
 
 """
 >>> def my_score(net, X=None, y=None):
@@ -54,10 +55,10 @@ class WECoherenceScoring(TopicScoring):
         self.kv_path = kv_path
         self.method = method
         self.binary = binary
-        
+             
         if coherence_object is None:
             if self.method == "centroid":
-                self.coherencemodel = coherence_metrics.WECoherenceCentroid(word2vec_path=self.kv_path,binary=self.binary,topk=topn)
+                self.coherencemodel = coherence_metrics2.WECoherenceCentroid(word2vec_path=self.kv_path,binary=self.binary,topk=topn)
                 _name = "wetc_c"
             elif self.method == "pairwise":
                 self.coherencemodel = coherence_metrics.WECoherencePairwise(word2vec_path=self.kv_path,binary=self.binary,topk=topn)
@@ -90,6 +91,8 @@ class TopicQualityScoring(TopicScoring):
     def on_epoch_end(self,net, dataset_train=None,dataset_valid=None,**kwargs):
         current_score = self._scoring(net)
         self._record_score(net.history, current_score)
+
+
 
 # class WECoherenceScoring(EpochScoring):
 #     def __init__(self, id2word:dict[int,str], method:str="pairwise", kv_path:Optional[str]=None, topn:int=10, binary: bool=True):

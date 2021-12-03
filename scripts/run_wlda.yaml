@@ -1,0 +1,19 @@
+model_name: WassersteinLatentDirichletAllocation
+corpus_name: M10
+use_pwe: False
+train_pwe: False
+
+model:
+  n_components: 50
+  embed_dim: 300
+  batch_size: 1000
+  lr: 0.01
+  lr_dec: 0.01
+  max_epochs: 300
+  device: cuda
+  activation_hidden: Softplus
+  dropout_rate_hidden: 0.2
+  l1_lambda: 0.001
+  l2_lambda: 0.001
+  topic_model: False
+  prior_name: dirichlet # gaussian, gmm_ctm, 
