@@ -33,5 +33,7 @@ models.GaussianStickBreakingModel
 models.RecurrentStickBreakingModel
 models.NeuralVariationalLatentDirichletAllocation
 models.ProductOfExpertsLatentDirichletAllocation
+models.NeuralSinkhornTopicModel
+models.WassersteinLatentDichchletAllocation
 ```
 
