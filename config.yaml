@@ -1,6 +1,21 @@
-dataroot:
-  /workdir/datasets
+system:
+  gpu:
+    true
+  core:
+    16
 
+env:
+  project_root:
+    /workdir
+  data_root:
+    /workdir/datasets
+
+dummy_embeddings:
+  path: /workdir/datasets/dummy_kv.txt
+  file: dummy_kv.txt
+  binary: False
+  url: https://gist.githubusercontent.com/rsimd/f07cd4891f7e0e0a01dff3fa72093769/raw/595f56e55aff1c9b67e6b80f5182ab14e14ee8a6/dummy_kv.txt
+    
 embeddings:
   w2v.3M.300d:
     path: /workdir/datasets/w2v.default/w2v.3M.300d.bin.pkl
@@ -22,9 +37,3 @@ embeddings:
     file: glove.6B/glove.6B.300d.bin.pkl
     binary: True
 
-dummy_embeddings:
-    path: /workdir/datasets/dummy_kv.txt
-    file: dummy_kv.txt
-    binary: False
-    url: https://gist.githubusercontent.com/rsimd/f07cd4891f7e0e0a01dff3fa72093769/raw/595f56e55aff1c9b67e6b80f5182ab14e14ee8a6/dummy_kv.txt
-  

@@ -1,7 +1,7 @@
 import os 
 import sys
 if ".." not in sys.path:
-    sys.path.append("/workdir/")
+    sys.path.append("/workdir/") # remove
 from typing import Any
 from sktopic import datasets
 import torch 

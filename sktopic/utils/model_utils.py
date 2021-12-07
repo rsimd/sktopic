@@ -1,3 +1,4 @@
+import os 
 import numpy as np 
 import torch 
 from typing import Any, Optional
@@ -15,12 +16,13 @@ import torch.nn.functional as F
 from sktopic.metrics.diversity import WETopicCentroidDistance
 from sktopic.metrics.wecoherence import WECoherenceCentroid,WECoherencePairwise
 
+
 def get_kv(cfg_path="/workdir/datasets.yaml"):
     outputs = {}
     with open(cfg_path) as f:
         cfg = yaml.safe_load(f)
     for key,val in cfg["embeddings"].items():
-        save_path =val["path"] 
+        save_path =os.path.join(cfg["env"]["data_root"], val["file"])
         with open(save_path, "br") as f:
             wv = pickle.load(f)
         outputs[key] = wv
