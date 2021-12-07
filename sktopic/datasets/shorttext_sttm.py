@@ -38,13 +38,16 @@ def download_file(url:str,dst_path:str,mode="w")->None:
         print(e)
 
 def load_cache(data_dir:str)->dict[str,Any]:
-    X = sparse.load_npz("/".join([data_dir,"corpus.npz"]))
-    labels = pd.read_csv("/".join([data_dir,"labels.txt"]), header=None).values.T.squeeze()
-    with open("/".join([data_dir,"vocabulary.txt"])) as f:
+    X = os.path.join(data_dir,"corpus.npz") #X = sparse.load_npz("/".join([data_dir,"corpus.npz"]))
+    fname = os.path.join(data_dir,"labels.txt")#fname = "/".join([data_dir,"labels.txt"])
+    labels = pd.read_csv(fname, header=None).values.T.squeeze()
+    fname = os.path.join(data_dir,"vocabulary.txt")# fname= open("/".join([data_dir,"vocabulary.txt"]))
+    with open(fname) as f:
         vocabs = f.readlines()
     id2word = {k:v.replace("\n","") for k,v in enumerate(vocabs)}
     word2id = {v:k for k,v in id2word.items()}
-    df=pd.read_table("/".join([data_dir,"corpus.txt"]),header=None)
+    fname = os.path.join(data_dir,"corpus.txt") # "/".join([data_dir,"corpus.txt"])
+    df=pd.read_table(fname,header=None)
     df.columns = ["doc"]
     outputs = dict(
         X=X, 
@@ -143,7 +146,7 @@ def fetch_shortext(data_name:str,
     """
     if data_home is None:
         data_home = rootpath.detect() + "/datasets"
-    data_dir = "/".join([data_home, data_name])
+    data_dir = os.path.join(data_home, data_name) #data_dir = "/".join([data_home, data_name])
     if use_cache:
         try:
             outputs = load_cache(data_dir)

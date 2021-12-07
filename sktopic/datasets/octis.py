@@ -40,11 +40,12 @@ def load_from_uri(data_name,config:dict[str,str], data_home:Optional[str]=None)-
     pandarallel.initialize()
     # download txt
     #files = ["corpus.txt", "labels.txt", "vocabulary.txt", "metadata.json", "corpus.tsv"]
-    corpus_path = "/".join([config["data_root"],data_name,"corpus.txt"])
-    labels_path = "/".join([config["data_root"],data_name,"labels.txt"])
-    #vocab_path = "/".join([config["data_root"],data_name, "vocabulary.txt"])
-    meta_path = "/".join([config["data_root"], data_name,"metadata.json"])
-    tsv_path = "/".join([config["data_root"], data_name,"corpus.tsv"])
+    
+    corpus_path = os.path.join(config["data_root"],data_name,"corpus.txt") #corpus_path = "/".join([config["data_root"],data_name,"corpus.txt"])
+    labels_path = os.path.join(config["data_root"], data_name, "labels.txt") #labels_path = "/".join([config["data_root"],data_name,"labels.txt"])
+    ##vocab_path = "/".join([config["data_root"],data_name, "vocabulary.txt"])
+    meta_path = os.path.join(config["data_root"], data_name,"metadata.json") #meta_path = "/".join([config["data_root"], data_name,"metadata.json"])
+    tsv_path = os.path.join([config["data_root"], data_name,"corpus.tsv"]) #tsv_path = "/".join([config["data_root"], data_name,"corpus.tsv"])
 
     df=pd.read_table(corpus_path,header=None)
     df.columns = ["doc"]
@@ -144,7 +145,7 @@ def fetch_shortext(data_name:str,
     """
     if data_home is None:
         data_home = rootpath.detect() + "/datasets"
-    data_dir = "/".join([data_home, data_name])
+    data_dir = os.path.join(data_home, data_name) # data_dir = "/".join([data_home, data_name])
     if use_cache:
         try:
             outputs = load_cache(data_dir)
