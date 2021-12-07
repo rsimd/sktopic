@@ -3,6 +3,7 @@ corpus_name: M10
 use_pwe: False
 train_pwe: False
 
+cfg_path: /sktopic/config.yaml
 model:
   n_components: 50
   embed_dim: 300

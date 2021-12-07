@@ -28,6 +28,8 @@ RUN echo 'alias pip="pip3.9"' >> ~/.bashrc
 RUN pip install -U pip && pip install poetry
 WORKDIR /root/.ipython/profile_default/startup
 RUN wget https://gist.githubusercontent.com/knowsuchagency/f7b2203dd613756a45f816d6809f01a6/raw/c9c1b7ad9fa25a57ee1903d755d5525894ffa411/typecheck.py
-WORKDIR /workdir
-RUN /usr/local/bin/poetry install
-RUN /usr/local/bin/poetry shell
+WORKDIR /sktopic
+COPY poetry.lock .
+COPY pyproject.toml .
+#RUN /usr/local/bin/poetry install
+#RUN /usr/local/bin/poetry shell

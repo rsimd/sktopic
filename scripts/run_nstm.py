@@ -7,13 +7,17 @@ import torch
 import skorch 
 import sktopic 
 from tqdm import tqdm 
-from sktopic.utils.model_utils import get_kv, eval_all, override_word_embeddings
+from sktopic.utils.model_utils import (
+    get_kv, eval_all, override_word_embeddings, save_topics)
+
 import wandb 
 import time
 from sktopic import models
 import hydra 
 from omegaconf import DictConfig
 import matplotlib.pyplot as plt 
+
+MODULE_DIR = os.path.dirname(__file__)
 
 # from sktopic.callbacks.wecoherence import TopicScoring
 # from octis.evaluation_metrics import coherence_metrics
@@ -25,14 +29,6 @@ import matplotlib.pyplot as plt
 #         self.model=coherence_metrics.Coherence(measure='c_npmi',texts=texts)
 #         scoring_fn = self.model.score
 #         super().__init__(scoring_fn, id2word, topn=10, lower_is_better=lower_is_better, name=name)
-
-def save_topics(topics:list[list[str]], fpath="topics.txt")->None:
-    with open(fpath, "w") as f:
-        tmp = ""
-        for line in topics:
-            tmp += " ".join(line)
-            tmp += "\n"
-        f.write(tmp)
 
 def get_config(cfg:DictConfig)->dict[str,Any]:
     wandb_config = dict(cfg)
@@ -47,7 +43,7 @@ def main(cfg:DictConfig)->None:
     dataset = eval(f"datasets.fetch_{cfg.corpus_name}()")
     dataset.train_test_split_stratifiedkfold()
     #_WETC_pw= sktopic.callbacks.WECoherenceScoring(dataset.id2word,kv_path="/workdir/datasets/dummy_kv.txt",binary=False)
-    _WETC_c = sktopic.callbacks.WECoherenceScoring(dataset.id2word,kv_path="/workdir/datasets/dummy_kv.txt",binary=False,method="centroid")
+    _WETC_c = sktopic.callbacks.WECoherenceScoring(dataset.id2word,kv_path=os.path.join(MODULE_DIR,"dummy_kv.txt"),binary=False,method="centroid")
     _kvs = get_kv()
     #_WETC_pw.coherencemodel._wv = _kvs["glove.42B.300d"]
     _WETC_c.coherencemodel._wv = _kvs["glove.42B.300d"]

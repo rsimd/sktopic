@@ -1,26 +1,22 @@
 import os, sys
 if ".." not in sys.path:
-    sys.path.append("/workdir/") # remove
+    sys.path.append("/sktopic") # remove
     from typing import Any
+    
 from sktopic import datasets
 import torch 
 import skorch 
 import sktopic 
 from tqdm import tqdm 
-from sktopic.utils.model_utils import get_kv, eval_all, override_word_embeddings
+from sktopic.utils.model_utils import (
+    get_kv, eval_all, override_word_embeddings, save_topics)
 import wandb 
 import time
 from sktopic import models
 import hydra 
 from omegaconf import DictConfig
 
-def save_topics(topics:list[list[str]], fpath="topics.txt")->None:
-    with open(fpath, "w") as f:
-        tmp = ""
-        for line in topics:
-            tmp += " ".join(line)
-            tmp += "\n"
-        f.write(tmp)
+MODULE_DIR = os.path.dirname(__file__)
 
 def get_config(cfg:DictConfig)->dict[str,Any]:
     wandb_config = dict(cfg)
@@ -29,16 +25,13 @@ def get_config(cfg:DictConfig)->dict[str,Any]:
         wandb_config["model."+key] = model_config[key]
     return wandb_config
 
-
 @hydra.main(config_name='run_wlda.yaml')
 def main(cfg:DictConfig)->None:
     print("Start.........")
     dataset = eval(f"datasets.fetch_{cfg.corpus_name}()")
     dataset.train_test_split_stratifiedkfold()
-    #_WETC_pw= sktopic.callbacks.WECoherenceScoring(dataset.id2word,kv_path="/workdir/datasets/dummy_kv.txt",binary=False)
-    _WETC_c = sktopic.callbacks.WECoherenceScoring(dataset.id2word,kv_path="/workdir/datasets/dummy_kv.txt",binary=False,method="centroid")
+    _WETC_c = sktopic.callbacks.WECoherenceScoring(dataset.id2word,kv_path=os.path.join(MODULE_DIR,"dummy_kv.txt"),binary=False,method="centroid")
     _kvs = get_kv()
-    #_WETC_pw.coherencemodel._wv = _kvs["glove.42B.300d"]
     _WETC_c.coherencemodel._wv = _kvs["glove.42B.300d"]
     SEED = int(time.time())
     sktopic.utils.manual_seed(SEED)
@@ -49,12 +42,9 @@ def main(cfg:DictConfig)->None:
     wandb_run.config.update(get_config(cfg))
     # ----------------------------------------------------
     callbacks = [
-            #_WETC_pw, #WECoherenceScoring(dataset.id2word),
             _WETC_c,
             sktopic.callbacks.TopicDiversityScoring(dataset.id2word),
             sktopic.callbacks.NaNChecker(),
-            #skorch.callbacks.EarlyStopping(patience=10,threshold=1e-6),
-            #LRScheduler(),
             skorch.callbacks.GradientNormClipping(gradient_clip_value=0.25),
             skorch.callbacks.WandbLogger(wandb_run)
             ]
@@ -86,15 +76,18 @@ def main(cfg:DictConfig)->None:
         m = override_word_embeddings(m,dataset,_kvs[f"glove.6B.{cfg.model.embed_dim}d"],normalize=True,train_embed=cfg.train_pwe)
 
     print(f"Run {m.__class__.__name__} num_topics={cfg.model.n_components}, embed_dim={cfg.model.embed_dim}",)
-    m.fit(dataset.X_tr)
-    results = eval_all(m,dataset)
-    wandb_run.log(results)
+    try:
+        m.fit(dataset.X_tr)
+        results = eval_all(m,dataset)
+        wandb_run.log(results)
 
-    model_outputs = m.get_model_outputs(dataset.X_tr, dataset.X_te, dataset.id2word)
-    # model_outputをbinaryとしてファイルに保存する。
-    fpath = os.path.join(wandb_run.dir, "topics.txt")
-    save_topics(model_outputs["topics"],fpath)
-    wandb_run.save(fpath)
+        model_outputs = m.get_model_outputs(dataset.X_tr, dataset.X_te, dataset.id2word)
+        # model_outputをbinaryとしてファイルに保存する。
+        fpath = os.path.join(wandb_run.dir, "topics.txt")
+        save_topics(model_outputs["topics"],fpath)
+        wandb_run.save(fpath)
+    except:
+        ...
     wandb_run.finish()
 
 if __name__ == "__main__":

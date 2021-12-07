@@ -16,13 +16,19 @@ import torch.nn.functional as F
 from sktopic.metrics.diversity import WETopicCentroidDistance
 from sktopic.metrics.wecoherence import WECoherenceCentroid,WECoherencePairwise
 
+MODULE_DIR = os.path.dirname(__file__) # /path~~/sktopic/sktopic/datasets
+PRJ_ROOT = MODULE_DIR.replace("/sktopic/utils","")
+DATA_ROOT = os.path.join(PRJ_ROOT,"datasets")
 
-def get_kv(cfg_path="/workdir/datasets.yaml"):
+print("!>>>>>>>>>>>", PRJ_ROOT)
+def get_kv(cfg_path=None):
+    if cfg_path is None:
+        cfg_path = os.path.join(PRJ_ROOT, "datasets.yaml")
     outputs = {}
     with open(cfg_path) as f:
         cfg = yaml.safe_load(f)
     for key,val in cfg["embeddings"].items():
-        save_path =os.path.join(cfg["env"]["data_root"], val["file"])
+        save_path =os.path.join(DATA_ROOT, val["file"])
         with open(save_path, "br") as f:
             wv = pickle.load(f)
         outputs[key] = wv
@@ -65,7 +71,7 @@ def eval_all(trainer:Any, dataset: CorpusContainer)->dict[str,float]:
     self = trainer
     def get_all_metrics(dataset,texts_external=None, 
         kv_path_dict:dict[str,str]={},
-        dummy_kv_path:str="/workdir/datasets/dummy_kv.txt"):
+        dummy_kv_path:str=os.path.join(DATA_ROOT,"dummy_kv.txt")):
         print("(1/3) Loading defaults------------------------------------")
         texts = [line.split() for line in dataset.corpus]
         
@@ -160,3 +166,11 @@ def eval_all(trainer:Any, dataset: CorpusContainer)->dict[str,float]:
     r["PerplexityRecons"] = recons_ppl = self.perplexity_from_missing_bow(dataset.X_te)
     r["NormalizedPerplexityRecons"] = recons_ppl / len(dataset.id2word)
     return r 
+
+def save_topics(topics:list[list[str]], fpath="topics.txt")->None:
+    with open(fpath, "w") as f:
+        tmp = ""
+        for line in topics:
+            tmp += " ".join(line)
+            tmp += "\n"
+        f.write(tmp)

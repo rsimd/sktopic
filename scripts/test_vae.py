@@ -12,19 +12,19 @@ from sktopic.utils.model_utils import get_kv,eval_all
 
 def main(K,L, dataset,MODEL,
         batch_size=2000,
-        max_epochs=1,
+        max_epochs=300,
         dropout_rate_hidden=0.5,
-        device="cpu",
+        device="cuda",
         #criterion__prior_name="dirichlet",#"gmm_ctm",
         lr=0.05,
-        use_pwe=False, train_pwe=False, exp_seed=0,data_seed=0):
+        use_pwe=False, train_pwe=False, exp_seed=None,data_seed=0):
     #from sklearn.model_selection import train_test_split
     #dataset = DATASET()
     dataset.train_test_split_stratifiedkfold(data_seed)
     _WECoherenceScoring = WECoherenceScoring(dataset.id2word,kv_path="/workdir/datasets/dummy_kv.txt",binary=False)
     _kvs = get_kv()
     _WECoherenceScoring.coherencemodel._wv = _kvs["glove.6B.50d"]
-    seed = sktopic.utils.manual_seed(exp_seed)
+    exp_seed = sktopic.utils.manual_seed() if exp_seed is None else sktopic.utils.manual_seed(exp_seed)
     # wandb logger
     wandb_run = wandb.init(project="sktopic", entity="rsimd")
     wandb_run.config.update(

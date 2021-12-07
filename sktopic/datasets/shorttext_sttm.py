@@ -15,6 +15,9 @@ import urllib.error
 import urllib.request
 from .corpus_container import CorpusContainer
 
+MODULE_DIR = os.path.dirname(__file__) # /path~~/sktopic/sktopic/datasets
+PRJ_ROOT = MODULE_DIR.replace("/sktopic/datasets","")
+
 __all__ = [
     "fetch_SearchSnippets",
     "fetch_StackOverflow",
@@ -24,7 +27,7 @@ __all__ = [
     "fetch_PascalFlicker",
 ]
 
-MODULE_PATH = rootpath.detect() + "/sktopic/datasets"
+
 
 def download_file(url:str,dst_path:str,mode="w")->None:
     try:
@@ -142,7 +145,7 @@ def fetch_shortext(data_name:str,
         If you try to use a cache file and it can't be loaded, return an error.
     """
     if data_home is None:
-        data_home = rootpath.detect() + "/datasets"
+        data_home = PRJ_ROOT + "/datasets"
     data_dir = "/".join([data_home, data_name])
     if use_cache:
         try:
@@ -155,7 +158,10 @@ def fetch_shortext(data_name:str,
             else:
                 raise IOError(msg)
     print("Download corpus...")
-    config = OmegaConf.load(f"{MODULE_PATH}/sourse.yaml")[data_name]
+    if data_home is None:
+        config = OmegaConf.load(os.path.join(MODULE_DIR,"sourse.yaml"))[data_name]
+    else:
+        config = OmegaConf.load(os.path.join(data_home,"sourse.yaml"))[data_name]
     outputs = load_from_uri(config, data_home)
     return CorpusContainer(**outputs,data_name=data_name)
 

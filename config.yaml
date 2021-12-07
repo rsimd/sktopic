@@ -6,9 +6,9 @@ system:
 
 env:
   project_root:
-    /workdir
+    /sktopic
   data_root:
-    /workdir/datasets
+    ~/.sktopic
 
 dummy_embeddings:
   path: /workdir/datasets/dummy_kv.txt
