@@ -1,7 +1,7 @@
 import os 
 import sys
 if ".." not in sys.path:
-    sys.path.append("/workdir/") # remove
+    sys.path.append(".") # remove
 from typing import Any
 from sktopic import datasets
 import torch 
@@ -15,8 +15,10 @@ import time
 from sktopic import models
 import hydra 
 from omegaconf import DictConfig
+#from sktopic.utils.get_coherence import get_cohs
 
 MODULE_DIR = os.path.dirname(__file__)
+PRJ_ROOT = MODULE_DIR.replace("/scripts","") 
 
 def get_config(cfg:DictConfig)->dict[str,Any]:
     wandb_config = dict(cfg)
@@ -27,6 +29,9 @@ def get_config(cfg:DictConfig)->dict[str,Any]:
     
 @hydra.main(config_name='run_vae.yaml')
 def main(cfg:DictConfig)->None:
+    print(">>>",os.getcwd())
+    print(">>>",MODULE_DIR)
+    print(">>>",PRJ_ROOT)
     print("start.........")
     dataset = eval(f"datasets.fetch_{cfg.corpus_name}()")
     dataset.train_test_split_stratifiedkfold()
@@ -96,9 +101,14 @@ def main(cfg:DictConfig)->None:
         fpath = os.path.join(wandb_run.dir, "topics.txt")
         save_topics(model_outputs["topics"],fpath)
         wandb_run.save(fpath)
+        wikipedia_coherences = sktopic.utils.get_cohs(fpath, 
+        os.path.join(PRJ_ROOT,"palmetto-0.1.0-jar-with-dependencies.jar"),
+        os.path.join(PRJ_ROOT,"wikipedia_bd"))
+        wandb_run.log(wikipedia_coherences)
     except:
         ...
     wandb_run.finish()
 
 if __name__ == "__main__":
+    
     main()

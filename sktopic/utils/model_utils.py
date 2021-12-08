@@ -20,7 +20,6 @@ MODULE_DIR = os.path.dirname(__file__) # /path~~/sktopic/sktopic/datasets
 PRJ_ROOT = MODULE_DIR.replace("/sktopic/utils","")
 DATA_ROOT = os.path.join(PRJ_ROOT,"datasets")
 
-print("!>>>>>>>>>>>", PRJ_ROOT)
 def get_kv(cfg_path=None):
     if cfg_path is None:
         cfg_path = os.path.join(PRJ_ROOT, "datasets.yaml")
