@@ -25,7 +25,7 @@ from skorch.utils import to_numpy, to_device
 from skorch.setter import optimizer_setter
 from scipy import sparse 
 from sklearn.cluster import KMeans
-from sktopic.utils.math import split_seq, seq2bow, bow2seq
+from sktopic.utils.math_utils import split_seq, seq2bow, bow2seq
 from sktopic.callbacks import PerplexityScoring
 from skorch.callbacks import PassthroughScoring,EpochTimer,PrintLog
 from ..utils.get_results import get_similar_words, get_topwords, get_topic_top_words

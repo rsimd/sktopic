@@ -3,7 +3,9 @@ wikipedia_bd
 *.gz
 multirun
 scripts/outputs
-otuputs
+outputs
+\#*#
+*~
 wandb
 /datasets
 data
