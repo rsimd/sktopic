@@ -106,7 +106,8 @@ def main(cfg:DictConfig)->None:
         os.path.join(PRJ_ROOT,"wikipedia_bd"))
         wandb_run.log(wikipedia_coherences)
     except:
-        ...
+        import traceback
+        traceback.print_exc()
     wandb_run.finish()
 
 if __name__ == "__main__":

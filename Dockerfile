@@ -31,5 +31,6 @@ RUN wget https://gist.githubusercontent.com/knowsuchagency/f7b2203dd613756a45f81
 WORKDIR /sktopic
 COPY poetry.lock .
 COPY pyproject.toml .
+RUN apt-get install git 
 #RUN /usr/local/bin/poetry install
 #RUN /usr/local/bin/poetry shell
