@@ -2,6 +2,7 @@ model_name: NeuralSinkhornTopicModel
 corpus_name: M10
 use_pwe: False
 train_pwe: False
+seed: -1
 
 model:
   n_components: 50
@@ -13,3 +14,8 @@ model:
   device: cuda
   activation_hidden: Softplus
   dropout_rate_hidden: 0.2
+
+wandb:
+  entity: rsimd
+  project: NTMF_finetune
+  job_type: search

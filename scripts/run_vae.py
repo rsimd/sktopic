@@ -40,8 +40,14 @@ def main(cfg:DictConfig)->None:
     _kvs = get_kv()
     #_WETC_pw.coherencemodel._wv = _kvs["glove.42B.300d"]
     _WETC_c.coherencemodel._wv = _kvs["glove.42B.300d"]
-    SEED = int(time.time())
+    if cfg.seed == -1:
+        SEED = int(time.time())
+        cfg.seed=SEED
+    else:
+        SEED = cfg.seed
     sktopic.utils.manual_seed(SEED) #(1637809708)#(1637805045) #e44
+    #SEED = int(time.time())
+    #sktopic.utils.manual_seed(SEED) #(1637809708)#(1637805045) #e44
     V = dataset.vocab_size
     # ----------------------------------------------------
     print("shape=",dataset.X.shape, "labels=",dataset.num_labels)    
@@ -51,6 +57,10 @@ def main(cfg:DictConfig)->None:
         job_type=cfg.wandb.job_type,
         reinit=True,) #wandb.init(project="sktopic", entity="rsimd")
     wandb_run.config.update(get_config(cfg))
+    
+    print("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■")
+    print("wandb_run was initialized ")
+    print("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■")
     # ----------------------------------------------------
     callbacks = [
             #_WETC_pw, #WECoherenceScoring(dataset.id2word),
@@ -62,7 +72,9 @@ def main(cfg:DictConfig)->None:
             skorch.callbacks.GradientNormClipping(gradient_clip_value=0.25),
             skorch.callbacks.WandbLogger(wandb_run)
             ]
-
+    print("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■")
+    print("callbacks was initialized ")
+    print("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■")
     model_cls = eval(f"models.{cfg.model_name}")
     m = model_cls(
         V,cfg.model.n_components,
@@ -87,10 +99,15 @@ def main(cfg:DictConfig)->None:
         criterion__l2_lambda=cfg.model.l2_lambda,
         criterion__l1_lambda=cfg.model.l1_lambda,
         )
+    print("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■")
+    print("Trainer was initialized ")
+    print("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■")
     if cfg.use_pwe:
         m = override_word_embeddings(m,dataset,_kvs[f"glove.6B.{cfg.model.embed_dim}d"],normalize=True,train_embed=cfg.train_pwe)
     
+    print("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■")
     print(f"Run {m.__class__.__name__} num_topics={cfg.model.n_components}, embed_dim={cfg.model.embed_dim}",)
+    print("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■")
     try:
         m.fit(dataset.X_tr)
         results = eval_all(m,dataset)
@@ -103,7 +120,7 @@ def main(cfg:DictConfig)->None:
         wandb_run.save(fpath)
         wikipedia_coherences = sktopic.utils.get_cohs(fpath, 
         os.path.join(PRJ_ROOT,"palmetto-0.1.0-jar-with-dependencies.jar"),
-        os.path.join(PRJ_ROOT,"wikipedia_bd"))
+        os.path.join(PRJ_ROOT,"wikipedia_bd"), method=["npmi"])
         wandb_run.log(wikipedia_coherences)
     except:
         import traceback

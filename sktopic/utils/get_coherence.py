@@ -15,7 +15,8 @@ def get_cohline(fname=None, outputs=None):
 
 def get_cohs(fpath,
     program_path= "palmetto-0.1.0-jar-with-dependencies.jar",
-    corpus_path= "wikipedia_bd")->dict[str,float]:
+    corpus_path= "wikipedia_bd",
+    methods = ["c_p", "c_a", "c_v", "npmi", "uci"])->dict[str,float]:
     """get topic coherence based on wikipedia
 
     Parameters
@@ -48,7 +49,7 @@ def get_cohs(fpath,
     print("Save topicsN10.txt...")
     print("------------------------")
     results = {}
-    methods = ["c_p", "c_a", "c_v", "npmi", "uci"]
+    #methods = ["c_p", "c_a", "c_v", "npmi", "uci"]
     for ix, method in enumerate(methods):
         cmd = f"java -jar {program_path} {corpus_path} {method} {topicsN10_path}"
         outputs = subprocess.check_output(cmd,shell=True).decode()

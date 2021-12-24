@@ -2,6 +2,7 @@ model_name: RecurrentStickBreakingModel
 corpus_name: M10
 use_pwe: False
 train_pwe: False
+seed: -1
 
 model:
   n_components: 50

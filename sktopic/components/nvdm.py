@@ -124,6 +124,7 @@ class Decoder(nn.Module):
 
     def forward(self,theta:torch.Tensor)->torch.Tensor:
         theta = self.dropout(theta)
+        
         #assert theta.sum() == theta.size(0),theta.sum()
         beta = self.get_beta()
         if self.topic_model:
@@ -131,7 +132,14 @@ class Decoder(nn.Module):
                 beta = beta+self.bias
             phi = self.softmax(beta)
             px = torch.matmul(theta, phi)
-            return torch.log(px)
+            log_softmax= torch.log(px  +1e-7)
+
+            assert not theta.isnan().any(), "■■■■theta has NaN!■■■■"
+            assert not phi.isnan().any(), "■■■■phi has NaN!■■■■"
+            assert not px.isnan().any(), "■■■■px has NaN!■■■■"
+            assert not log_softmax.isnan().any(), "■■■■Forward Prop has NaN!■■■■"
+            
+            return log_softmax
         else:
             logit = torch.matmul(theta, beta)
             if self.use_bias:

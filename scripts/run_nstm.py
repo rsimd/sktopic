@@ -1,9 +1,10 @@
 import os, sys
 if ".." not in sys.path:
-    sys.path.append("/workdir/") # remove
-    from typing import Any
+    sys.path.append(".") # remove
+from typing import Any
 from sktopic import datasets
 import torch 
+import torch.nn.functional as F 
 import skorch 
 import sktopic 
 from tqdm import tqdm 
@@ -18,6 +19,7 @@ from omegaconf import DictConfig
 import matplotlib.pyplot as plt 
 
 MODULE_DIR = os.path.dirname(__file__)
+PRJ_ROOT = MODULE_DIR.replace("/scripts","") 
 
 # from sktopic.callbacks.wecoherence import TopicScoring
 # from octis.evaluation_metrics import coherence_metrics
@@ -47,13 +49,27 @@ def main(cfg:DictConfig)->None:
     _kvs = get_kv()
     #_WETC_pw.coherencemodel._wv = _kvs["glove.42B.300d"]
     _WETC_c.coherencemodel._wv = _kvs["glove.42B.300d"]
-    SEED = int(time.time())
+    if cfg.seed == -1:
+        SEED = int(time.time())
+    else:
+        SEED = cfg.seed
     sktopic.utils.manual_seed(SEED) #(1637809708)#(1637805045) #e44
     V = dataset.vocab_size
     # ----------------------------------------------------
     print("shape=",dataset.X.shape, "labels=",dataset.num_labels)    
-    wandb_run = wandb.init(entity="rsimd",reinit=True) #wandb.init(project="sktopic", entity="rsimd")
+    wandb_run = wandb.init(
+        entity=cfg.wandb.entity,
+        project=cfg.wandb.project,
+        job_type=cfg.wandb.job_type,
+        reinit=True,
+        allow_val_change=True) #wandb.init(project="sktopic", entity="rsimd")
+    cfg.seed = SEED
     wandb_run.config.update(get_config(cfg))
+    #wandb_run.config.update({"seed":SEED})
+    print("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■")
+    print("wandb_run was initialized ")
+    print("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■")
+
     # ----------------------------------------------------
     callbacks = [
             #_WETC_pw, #WECoherenceScoring(dataset.id2word),
@@ -66,7 +82,9 @@ def main(cfg:DictConfig)->None:
             skorch.callbacks.WandbLogger(wandb_run),
             #NPMIScoring([line.split() for line in dataset.corpus], dataset.id2word)
             ]
-
+    print("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■")
+    print("callbacks was initialized ")
+    print("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■")
     model_cls = models.NeuralSinkhornTopicModel
     m = model_cls(
         V,cfg.model.n_components,
@@ -86,12 +104,15 @@ def main(cfg:DictConfig)->None:
             ("*.word_embeddings.*", {"lr":cfg.model.lr_dec})
         ],
         )
-    import torch.nn.functional as F 
-    
+    print("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■")
+    print("Trainer was initialized ")
+    print("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■")
     if cfg.use_pwe:
         m = override_word_embeddings(m,dataset,_kvs[f"glove.6B.{cfg.model.embed_dim}d"],normalize=True,train_embed=cfg.train_pwe)
 
+    print("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■")
     print(f"Run {m.__class__.__name__} num_topics={cfg.model.n_components}, embed_dim={cfg.model.embed_dim}",)
+    print("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■")
     try:
         m.fit(dataset.X_tr)
         results = eval_all(m,dataset)
@@ -102,9 +123,14 @@ def main(cfg:DictConfig)->None:
         fpath = os.path.join(wandb_run.dir, "topics.txt")
         save_topics(model_outputs["topics"],fpath)
         wandb_run.save(fpath)
-        wandb_run.finish()
+        wikipedia_coherences = sktopic.utils.get_cohs(fpath, 
+        os.path.join(PRJ_ROOT,"palmetto-0.1.0-jar-with-dependencies.jar"),
+        os.path.join(PRJ_ROOT,"wikipedia_bd"))
+        wandb_run.log(wikipedia_coherences)
     except:
-        print("An error has occurred")
+        import traceback
+        traceback.print_exc()
+    wandb_run.finish()
 
 if __name__ == "__main__":
     main()
